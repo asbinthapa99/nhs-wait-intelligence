@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Leaflet overrides — prevent SSR flash */
+.leaflet-container {
+  background: #e8f0f7;
+}
