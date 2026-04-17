@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+.pytest_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+test.db
+
+# Node
+node_modules/
+.next/
+.env.local
+npm-debug.log*
+
+# Environment
+.env
+*.env
+
+# Data files (large — manage with DVC or download scripts)
+pipeline/data/raw/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
