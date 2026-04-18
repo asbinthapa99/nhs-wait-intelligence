@@ -1,113 +1,199 @@
-# NHS Waiting List Intelligence Platform
+# NHS Wait Intelligence — Decision Engine
 
-An AI-powered full-stack platform that analyses NHS waiting list inequality across England using 100% public data.
+An AI-powered decision intelligence platform for reducing NHS waiting list inequalities through predictive modeling, resource optimization, and policy simulation.
 
-[![CI](https://github.com/your-username/nhs-wait-intelligence/actions/workflows/test.yml/badge.svg)](https://github.com/your-username/nhs-wait-intelligence/actions)
+The repository contains:
+- `frontend/` Next.js frontend
+- `backend/` FastAPI API
+- `pipeline/` ETL and forecast persistence
+- `.github/workflows/` CI and monthly refresh automation
 
----
+## Recent Additions
 
-## What it does
-
-Turns raw NHS England RTT (Referral to Treatment) data into an explorable dashboard with AI-assisted explanations, inequality scoring, and 6-month forecasting.
-
-**Key findings surfaced by the platform:**
-- 7.62 million patients currently on the NHS waiting list
-- 38.4% waiting beyond the 18-week constitutional standard
-- North East & Yorkshire waits **2.4× longer** than the South West for orthopaedic surgery
-- Deprivation explains ~91% of regional inequality variance (r ≈ 0.91)
-
----
+- **Decision Engine**: Simulator for interventions, resource optimization, and policy scenarios.
+- **Advanced Local AI**: An auto-updating Smart Logic Engine that parses intent and generates policy recommendations offline when API keys are unavailable.
+- **AI Upgrades**: Interactive streaming explanations, live anomaly detection feeds, and action recommendations.
+- **ICS Benchmarking**: Drill-down from national to Integrated Care System level performance metrics.
+- **Governance**: Explicit data provenance, methodology metrics, and zero patient-level data tracking.
+- Live data wiring for the frontend instead of mock-only page logic
+- Explicit no-data states and live freshness banners across the dashboard
+- Dataset status endpoint for snapshot coverage, counts, and staleness
+- CSV export endpoints for inequality, specialties, and trends
+- Persisted 6-month forecasts written by the pipeline and served by the API
+- RTT ingestion now upserts trusts and links waiting list rows to trusts
+- Optional CQC trust rating ingestion
+- Optional NHS region boundary asset generation for the map
+- Monthly GitHub Actions refresh workflow
+- Stronger backend and pipeline tests around live-data paths
+- Regions API now returns explicit empty/404 live states instead of backend mock fallbacks
+- Patient-focused local feature roadmap added in `docs/patient-features.md`
+- Stage 1 patient-facing page and patient guidance endpoints using live regional data
+- Stage 2 provider comparison, wait-estimate, and stay-vs-switch patient tools
+- Stage 3 patient support tools: preparation guide, GP conversation helper, contact routing, and data-transparency card
 
 ## Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────┐
-│  Next.js frontend (Vercel)                              │
-│  6 dashboard pages · Recharts · Leaflet · Tailwind CSS  │
+│  Next.js Frontend                                      │
+│  Overview · Map · Inequality · Specialties · Trends · AI │
 └──────────────────────┬──────────────────────────────────┘
-                       │ HTTP / JSON
+                       │ HTTP / JSON / CSV
 ┌──────────────────────▼──────────────────────────────────┐
-│  FastAPI backend (Railway)                              │
-│  7 endpoints · Rate limiting · Structured logging       │
-│  Claude claude-sonnet-4-6 AI layer with prompt caching         │
+│  FastAPI Backend                                        │
+│  Typed responses · rate limiting · AI cache · exports  │
 └──────────────────────┬──────────────────────────────────┘
                        │ SQLAlchemy
 ┌──────────────────────▼──────────────────────────────────┐
-│  PostgreSQL 17 (Neon)                                   │
-│  6 tables · Monthly ETL pipeline · Processed metrics    │
+│  PostgreSQL                                             │
+│  regions · trusts · waiting_lists · processed_metrics  │
+│  forecasts · ai_cache                                  │
 └──────────────────────┬──────────────────────────────────┘
-                       │
+                       │ Monthly ETL
 ┌──────────────────────▼──────────────────────────────────┐
-│  Data pipeline (GitHub Actions cron)                    │
-│  NHS RTT CSVs · ONS IMD · Inequality scoring            │
+│  Python Pipeline                                        │
+│  ONS seeding · RTT ingestion · CQC ratings · boundaries │
+│  inequality scoring · forecast persistence              │
 └─────────────────────────────────────────────────────────┘
 ```
 
----
+## Implemented Features
 
-## Dashboard pages
+### Frontend
 
-| Page | Route | Description |
-|------|-------|-------------|
-| National overview | `/` | KPI cards, backlog trend chart, worst regions |
-| Regional map | `/map` | Leaflet choropleth, region drill-down |
-| Inequality explorer | `/inequality` | Scatter plot (deprivation vs score), CSV export |
-| Specialty deep-dive | `/specialties` | Bar charts by specialty, YoY growth table |
-| Trends & forecasting | `/trends` | Multi-line comparison, 6-month linear forecast |
-| AI insights | `/ai` | Claude-powered Q&A grounded in live data |
+- National overview dashboard
+- Patient guidance page with regional selector, confidence labels, plain-English summaries, and NHS rights guidance
+- Provider comparison, transparent wait-range estimate, and stay-vs-switch recommendation on the patient page
+- Patient preparation, GP conversation helper, contact routing, and transparency guidance on the patient page
+- Dataset freshness banners and empty-state handling instead of client-side mock substitution
+- Regional map with region centers and optional boundary polygons
+- Inequality explorer with live scatter data
+- Specialty deep-dive with live YoY backlog change
+- Trends page backed by stored forecasts
+- AI insights page with streaming responses and multi-turn history
+- CSV downloads for live datasets
 
----
+## Patient-Facing Expansion
 
-## Tech stack
+The current shipped app is still analytics-first. Patient/local-people features are now tracked in:
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | Next.js 14, TypeScript, Tailwind CSS, Recharts, Leaflet |
-| Backend | Python 3.11, FastAPI, SQLAlchemy 2.0, Pydantic v2 |
-| Database | PostgreSQL 16 |
-| AI | Claude claude-sonnet-4-6 (Anthropic), prompt caching, DB response cache |
-| Pipeline | pandas, SQLAlchemy |
-| CI/CD | GitHub Actions |
-| Hosting | Vercel (frontend), Railway (backend), Neon (database) |
+- `docs/patient-features.md`
 
----
+That roadmap separates:
 
-## Quick start (local)
+- features that can be built now from the current regional datasets
+- features that need provider or postcode-level data first
+- features that need saved user state and notifications
+- the recommended core patient bundle: estimator, alternative finder, stay-vs-switch, alerts, and NHS guidance
 
-### Prerequisites
-- Docker & Docker Compose
+### Backend
+
+- `GET /health`
+- `GET /api/overview`
+- `GET /api/patient/local-summary`
+- `GET /api/patient/area-compare`
+- `GET /api/patient/choice-rights`
+- `GET /api/patient/journey-guide`
+- `GET /api/patient/preparation-guide`
+- `GET /api/patient/providers`
+- `POST /api/patient/gp-helper`
+- `POST /api/patient/estimate`
+- `POST /api/patient/contact-guide`
+- `POST /api/patient/stay-switch`
+- `GET /api/regions`
+- `GET /api/regions/{id}`
+- `GET /api/inequality`
+- `GET /api/specialties`
+- `GET /api/trends`
+- `GET /api/status/data`
+- `GET /api/export/inequality.csv`
+- `GET /api/export/specialties.csv`
+- `GET /api/export/trends.csv`
+- `POST /api/ai-explain`
+- `POST /api/ai-stream`
+- `POST /api/agent-explain`
+
+### Pipeline
+
+- Seeds NHS regions with deprivation and population data
+- Ingests RTT CSV drops
+- Upserts trusts from provider data
+- Optionally ingests CQC trust ratings from `pipeline/data/raw/cqc/trust_ratings.csv`
+- Optionally builds region map assets from `pipeline/data/raw/ons/nhs_regions.geojson`
+- Computes processed inequality metrics
+- Persists 6-month forecasts to `forecasts`
+
+## Data Inputs
+
+Expected raw files:
+
+- `pipeline/data/raw/rtt/*.csv` for NHS RTT data
+- `pipeline/data/raw/cqc/trust_ratings.csv` for CQC ratings
+- `pipeline/data/raw/ons/nhs_regions.geojson` for region boundaries
+- Optional `pipeline/data/raw/ons/imd_by_region.csv`
+- Optional `pipeline/data/raw/ons/population_by_region.csv`
+
+Processed map assets are written to:
+
+- `pipeline/data/processed/region_assets.json`
+
+## Official Source Downloads
+
+Use official public-source files and rename or reshape them into the filenames this repo expects.
+
+- `pipeline/data/raw/rtt/*.csv`
+  Download the monthly NHS England RTT provider-level extract from the RTT publication pages. The current publication page exposes both provider workbooks and a monthly `Full CSV data file` ZIP. Put the extracted CSV files in `pipeline/data/raw/rtt/`.
+  Source: https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/
+  Latest monthly page example: https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/rtt-data-2025-26/
+
+- `pipeline/data/raw/ons/population_by_region.csv`
+  Build this from the ONS population estimates time series dataset using the England region rows only. Save it as:
+  `region_name,population`
+  Source: https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/populationestimatestimeseriesdataset/current
+
+- `pipeline/data/raw/ons/imd_by_region.csv`
+  This repo expects a derived regional file, not the raw national deprivation release. Start from the official English Indices of Deprivation 2019 release, take `File 7`, aggregate the IMD score to the 7 NHS England regions, then save:
+  `region_name,deprivation_index`
+  Source: https://www.gov.uk/government/statistics/english-indices-of-deprivation-2019
+
+- `pipeline/data/raw/ons/nhs_regions.geojson`
+  Download the GeoJSON from the ONS NHS England Regions boundaries dataset and save it with this exact filename.
+  Source: https://www.data.gov.uk/dataset/4539d2b7-2ad5-4e06-bd1a-3a32408700ca/nhs-england-regions-january-2024-boundaries-en-bfc
+
+- `pipeline/data/raw/cqc/trust_ratings.csv`
+  You can build this from either the CQC API or the monthly `Care directory with ratings` sheet. The simplest repo-compatible shape is:
+  `provider_name,cqc_rating`
+  or
+  `provider_code,cqc_rating`
+  Source: https://www.cqc.org.uk/about-us/transparency/using-cqc-data
+
+If you want, the next step I can do is add a small preparation script that converts the official ONS/CQC downloads into the exact `population_by_region.csv`, `imd_by_region.csv`, and `trust_ratings.csv` files this pipeline expects.
+
+## Local Development
+
+### Requirements
+
 - Node 20+
 - Python 3.11+
+- PostgreSQL 16+
 
-### 1. Clone and configure
-
-```bash
-git clone https://github.com/your-username/nhs-wait-intelligence.git
-cd nhs-wait-intelligence
-
-cp backend/.env.example backend/.env
-# Edit backend/.env — add your ANTHROPIC_API_KEY
-```
-
-### 2. Start with Docker Compose
+### Backend
 
 ```bash
-docker compose up
+cd backend
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
 ```
 
-This starts:
-- PostgreSQL on `localhost:5432`
-- FastAPI on `http://localhost:8000`
-- Next.js on `http://localhost:3000`
+### Frontend
 
-The API serves mock data until the pipeline loads real data.
+```bash
+cd frontend
+npm ci
+npm run dev
+```
 
-### 3. (Optional) Load real NHS data
-
-Download NHS England RTT monthly CSVs from:
-https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/
-
-Place the CSV files in `pipeline/data/raw/rtt/` then run:
+### Pipeline
 
 ```bash
 cd pipeline
@@ -115,98 +201,58 @@ pip install -r requirements.txt
 python run_pipeline.py
 ```
 
----
+## Testing
 
-## Running tests
+### Frontend
 
 ```bash
-# Backend
-cd backend
-pip install -r requirements.txt
-pytest tests/ -v
-
-# Frontend (type check + build)
 cd frontend
-npm ci
-npx tsc --noEmit
 npm run build
 ```
 
----
+### Backend
 
-## API endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/health` | Health check |
-| GET | `/api/overview` | National KPIs + trend + worst regions |
-| GET | `/api/regions` | All 7 NHSE regions with inequality scores |
-| GET | `/api/regions/{id}` | Single region detail |
-| GET | `/api/inequality` | Scatter data + gap ratio |
-| GET | `/api/specialties` | Per-specialty breakdown |
-| GET | `/api/trends?regions=` | Historical + 6-month forecast |
-| POST | `/api/ai-explain` | AI question answering |
-
-Interactive docs: `http://localhost:8000/docs`
-
----
-
-## Inequality score methodology
-
-```
-Score = (% over 18 weeks × 0.40) + (backlog growth rate × 0.35) + (deprivation index × 0.25)
+```bash
+cd backend
+pytest tests/ -v
 ```
 
-Normalised 0–100. Higher = worse. Full methodology: [docs/inequality-methodology.md](docs/inequality-methodology.md)
+### Pipeline
 
----
-
-## Data sources
-
-| Dataset | Source | Frequency |
-|---------|--------|-----------|
-| RTT waiting times | NHS England | Monthly |
-| Index of Multiple Deprivation | ONS | Annual |
-| NHS region boundaries | ONS Geography Portal | Occasional |
-| Trust CQC ratings | Care Quality Commission | Quarterly |
-
-All data is publicly available at no cost. No patient-level data is used.
-
----
-
-## Deployment
-
-See [docs/setup.md](docs/setup.md) for full deployment instructions for Vercel, Railway, and Neon.
-
----
-
-## Project structure
-
-```
-nhs-wait-intelligence/
-├── frontend/          Next.js dashboard
-│   ├── pages/         6 route pages
-│   ├── components/    Reusable UI components
-│   └── lib/api.ts     API client + TypeScript types
-├── backend/           FastAPI application
-│   ├── app/
-│   │   ├── models/    SQLAlchemy models (6 tables)
-│   │   ├── schemas/   Pydantic response schemas
-│   │   ├── routers/   Endpoint handlers (6 routers)
-│   │   └── services/  Business logic (inequality, forecasting, AI)
-│   └── tests/         pytest integration tests
-├── pipeline/          ETL scripts
-│   ├── ingest_rtt.py  NHS RTT ingestion
-│   ├── ingest_ons.py  ONS deprivation seed
-│   ├── inequality_score.py  Metric computation
-│   └── run_pipeline.py      Master runner
-├── docs/              Architecture and API documentation
-├── docker-compose.yml Local development stack
-└── .github/workflows/ CI (test + build on every push)
+```bash
+cd pipeline
+pytest tests/ -q
 ```
 
----
+## Automation & Monitoring
 
-## Licence
+The platform is designed for "Zero-Touch" operation. It automatically refreshes data and only requires human intervention if an error occurs.
 
-MIT
+### GitHub Actions
+- **CI Workflow (`.github/workflows/test.yml`)**: Runs tests and builds on push/PR. Includes a unified `notify-failure` job that sends an email if any check fails.
+- **Monthly Refresh (`.github/workflows/refresh.yml`)**: Runs on the 1st day of each month at `06:00 UTC` (or manually via `workflow_dispatch`). Automatically scrapes NHS data and runs the ETL pipeline. Includes a failure notification step that emails logs if the pipeline crashes.
+
+### Background Workers (Celery)
+- **Celery Worker (`backend/app/worker.py`)**: Handles long-running AI queries and background tasks.
+- **Global Error Handling**: Uses a global `@task_failure` signal handler to catch any crashes in background tasks and instantly email the full traceback to the administrator.
+
+### Configuring Alerts
+To enable email alerts, the following environment variables (or GitHub Secrets) must be configured:
+- `SMTP_HOST`: (e.g., `smtp.gmail.com`)
+- `SMTP_PORT`: (e.g., `587`)
+- `SMTP_USERNAME`: (e.g., `your-email@gmail.com`)
+- `SMTP_PASSWORD`: (Your SMTP password or App Password)
+- `ALERT_EMAIL`: The recipient address for failure notifications
+
+*(Note: If using Gmail, you must generate an **App Password** for the `SMTP_PASSWORD` field.)*
+
+## Notes
+
+- The dashboard pages now render explicit empty/live-error states instead of silently substituting mock datasets.
+- The regions API includes fallback rows when metrics are unavailable and enriches them with boundary assets when present.
+- **Advanced Local AI (Smart Logic Engine)**: If `ANTHROPIC_API_KEY` is not configured (or if rate limits are hit), the system automatically gracefully downgrades to a local NLP heuristic engine. This engine:
+  - **Auto-Updates**: Reads directly from PostgreSQL, meaning its knowledge is instantly updated every time the monthly ETL runs without any retraining.
+  - **Parses Intent**: Detects keywords (e.g., "worst", "trend", "recommendation") to tailor the factual response.
+  - **Generates Policy**: Uses programmed thresholds (e.g., `inequality_score > 70` + `deteriorating trend`) to automatically formulate specific, data-backed policy recommendations.
+- Forecasts are now persisted by the pipeline and preferred by the trends API when available.
+- Decision-system roadmap and evidence template are documented in `docs/build-plan.md` and `docs/innovation-evidence.md`.
