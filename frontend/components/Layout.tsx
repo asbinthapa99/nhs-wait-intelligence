@@ -1,23 +1,32 @@
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { Home, Map, BarChart2, TrendingUp, Sparkles, Menu, X } from 'lucide-react'
+import { Home, Map, BarChart2, TrendingUp, Sparkles, FileText, Newspaper, GitCompare, BookOpen, Info, Menu, X, Zap, Shield, Target, User } from 'lucide-react'
 import { useState } from 'react'
 
 const navItems = [
-  { label: 'Overview', href: '/', icon: Home, mobileLabel: 'Home' },
-  { label: 'Regional Map', href: '/map', icon: Map, mobileLabel: 'Map' },
-  { label: 'Inequality', href: '/inequality', icon: BarChart2, mobileLabel: 'Inequality' },
-  { label: 'Specialties', href: '/specialties', icon: BarChart2, mobileLabel: 'Specialties' },
-  { label: 'Trends', href: '/trends', icon: TrendingUp, mobileLabel: 'Trends' },
-  { label: 'AI Insights', href: '/ai', icon: Sparkles, mobileLabel: 'AI' },
+  { label: 'Overview', href: '/', icon: Home },
+  { label: 'For Patients', href: '/patient', icon: User },
+  { label: 'Decision Engine', href: '/simulator', icon: Zap },
+  { label: 'Regional Map', href: '/map', icon: Map },
+  { label: 'ICS Benchmarks', href: '/ics', icon: Target },
+  { label: 'Inequality', href: '/inequality', icon: BarChart2 },
+  { label: 'Specialties', href: '/specialties', icon: BarChart2 },
+  { label: 'Trends', href: '/trends', icon: TrendingUp },
+  { label: 'Compare', href: '/compare', icon: GitCompare },
+  { label: 'AI Insights', href: '/ai', icon: Sparkles },
+  { label: 'Briefing', href: '/briefing', icon: FileText },
+  { label: 'Governance', href: '/governance', icon: Shield },
+  { label: 'NHS News', href: '/news', icon: Newspaper },
+  { label: 'Methodology', href: '/methodology', icon: BookOpen },
+  { label: 'About', href: '/about', icon: Info },
 ]
 
 const mobileNavItems = [
   { label: 'Home', href: '/', icon: Home },
-  { label: 'Map', href: '/map', icon: Map },
-  { label: 'Inequality', href: '/inequality', icon: BarChart2 },
-  { label: 'Trends', href: '/trends', icon: TrendingUp },
+  { label: 'Patient', href: '/patient', icon: User },
+  { label: 'Simulator', href: '/simulator', icon: Zap },
   { label: 'AI', href: '/ai', icon: Sparkles },
+  { label: 'Menu', href: '#', icon: Menu },
 ]
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -28,9 +37,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-slate-100 font-sans">
       {/* Desktop Header */}
       <header className="hidden md:block bg-white border-b border-slate-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex items-center h-14">
-            <span className="text-nhs-blue font-bold text-lg mr-10 whitespace-nowrap">
+        <div className="max-w-7xl mx-auto px-6 overflow-x-auto">
+          <div className="flex items-center h-14 min-w-max">
+            <span className="text-nhs-blue font-bold text-lg mr-8 whitespace-nowrap">
               NHS Wait Intelligence
             </span>
             <nav className="flex items-center gap-1">
