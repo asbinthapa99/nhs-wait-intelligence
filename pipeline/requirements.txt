@@ -1,0 +1,9 @@
+pandas==2.2.2
+requests==2.32.3
+python-dotenv==1.0.1
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.30
+openpyxl==3.1.2
+great_expectations==0.18.15
+pytest==8.2.1
+beautifulsoup4==4.12.3

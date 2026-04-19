@@ -6,7 +6,7 @@ The repository contains:
 - `frontend/` Next.js frontend
 - `backend/` FastAPI API
 - `pipeline/` ETL and forecast persistence
-- `.github/workflows/` CI and monthly refresh automation
+- `.github/workflows/` CI and daily refresh automation
 
 ## Recent Additions
 
@@ -23,7 +23,7 @@ The repository contains:
 - RTT ingestion now upserts trusts and links waiting list rows to trusts
 - Optional CQC trust rating ingestion
 - Optional NHS region boundary asset generation for the map
-- Monthly GitHub Actions refresh workflow
+- Daily GitHub Actions refresh workflow
 - Stronger backend and pipeline tests around live-data paths
 - Regions API now returns explicit empty/404 live states instead of backend mock fallbacks
 - Patient-focused local feature roadmap added in `docs/patient-features.md`
@@ -230,7 +230,7 @@ The platform is designed for "Zero-Touch" operation. It automatically refreshes 
 
 ### GitHub Actions
 - **CI Workflow (`.github/workflows/test.yml`)**: Runs tests and builds on push/PR. Includes a unified `notify-failure` job that sends an email if any check fails.
-- **Monthly Refresh (`.github/workflows/refresh.yml`)**: Runs on the 1st day of each month at `06:00 UTC` (or manually via `workflow_dispatch`). Automatically scrapes NHS data and runs the ETL pipeline. Includes a failure notification step that emails logs if the pipeline crashes.
+- **Daily Refresh (`.github/workflows/refresh.yml`)**: Runs every day at `06:00 UTC` (or manually via `workflow_dispatch`). Automatically scrapes NHS data and runs the ETL pipeline. On failure it opens/updates a GitHub issue labelled `automation-failure`, plus sends an email if SMTP secrets are configured.
 
 ### Background Workers (Celery)
 - **Celery Worker (`backend/app/worker.py`)**: Handles long-running AI queries and background tasks.
@@ -246,13 +246,43 @@ To enable email alerts, the following environment variables (or GitHub Secrets) 
 
 *(Note: If using Gmail, you must generate an **App Password** for the `SMTP_PASSWORD` field.)*
 
+## Smart Local AI Engine
+
+When `ANTHROPIC_API_KEY` is not set or the cloud API is rate-limited, all AI endpoints automatically fall back to the **NHS Intelligence Local AI Engine** (`backend/app/services/local_ai.py`). This is a zero-dependency, always-on Q&A engine trained on embedded NHS domain knowledge.
+
+### What it knows
+
+| Domain | Detail |
+|---|---|
+| **All 7 NHS regions** | Inequality score, deprivation index, trend direction, and analyst notes per region |
+| **7 specialty profiles** | Backlog size, breach rate, YoY growth, and pressure rating for orthopaedics, mental health, ophthalmology, neurology, cardiology, gastroenterology, dermatology |
+| **National constants** | 7.62M backlog, 38.4% breach rate, 2.4× regional gap, r = 0.91 deprivation correlation, 100k workforce vacancies, RTT compliance history |
+| **Policy library** | Carr-Hill formula critique, ISP block-booking, elective hub mandates, CAMHS pathway reform, deprivation-weighted funding |
+
+### How it works
+
+1. **Intent scoring** — the question is scored against 300+ keywords across 25 intents. Exact-word matches score 2.0, substring matches score 0.7. The top 1–2 intents are selected.
+2. **Handler dispatch** — each intent has a dedicated response function that generates professional NHS analyst prose (not templated bullet points) using real numbers from both the embedded knowledge base and the live database context.
+3. **Live data footer** — every response ends with the actual PostgreSQL figures for the current query (breach rate, inequality score, trend, backlog total).
+
+### 25 intents covered
+
+`waiting_times` · `rtt_standard` · `worst_region` · `best_region` · `inequality` · `deprivation` · `trends` · `forecast` · `specialties` · `mental_health` · `capacity` · `workforce` · `funding` · `recommendations` · `comparison` · `cause_why` · `cancellations` · `emergency` · `politics` · `summary` · `data_explain` · `greeting` · `identity` · `capabilities` · `emotions`
+
+### Example questions it handles well
+
+- *"Which region is worst and why?"*
+- *"What is the national trend and where will it be in 12 months?"*
+- *"How does deprivation drive inequality?"*
+- *"Give me policy recommendations for the North East."*
+- *"What is happening with mental health waiting times?"*
+- *"Compare the North East to the South West."*
+- *"How does A&E pressure affect elective backlogs?"*
+- *"What is the NHS 18-week standard and is it being met?"*
+
 ## Notes
 
-- The dashboard pages now render explicit empty/live-error states instead of silently substituting mock datasets.
+- The dashboard pages render explicit empty/live-error states instead of silently substituting mock datasets.
 - The regions API includes fallback rows when metrics are unavailable and enriches them with boundary assets when present.
-- **Advanced Local AI (Smart Logic Engine)**: If `ANTHROPIC_API_KEY` is not configured (or if rate limits are hit), the system automatically gracefully downgrades to a local NLP heuristic engine. This engine:
-  - **Auto-Updates**: Reads directly from PostgreSQL, meaning its knowledge is instantly updated every time the monthly ETL runs without any retraining.
-  - **Parses Intent**: Detects keywords (e.g., "worst", "trend", "recommendation") to tailor the factual response.
-  - **Generates Policy**: Uses programmed thresholds (e.g., `inequality_score > 70` + `deteriorating trend`) to automatically formulate specific, data-backed policy recommendations.
-- Forecasts are now persisted by the pipeline and preferred by the trends API when available.
+- Forecasts are persisted by the pipeline and preferred by the trends API when available.
 - Decision-system roadmap and evidence template are documented in `docs/build-plan.md` and `docs/innovation-evidence.md`.

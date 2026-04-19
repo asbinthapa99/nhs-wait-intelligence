@@ -75,8 +75,8 @@ jobs:
           NEXT_PUBLIC_API_URL: http://localhost:8000
         run: npm run build
 
-  pipeline-lint:
-    name: Pipeline lint
+  pipeline-checks:
+    name: Pipeline checks
     runs-on: ubuntu-latest
 
     steps:
@@ -94,3 +94,25 @@ jobs:
       - name: Check syntax
         working-directory: pipeline
         run: python -m py_compile ingest_rtt.py ingest_ons.py inequality_score.py run_pipeline.py
+
+      - name: Run pipeline tests
+        working-directory: pipeline
+        run: pytest tests/ -q
+
+  notify-failure:
+    name: Notify Failure
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-build, pipeline-checks]
+    if: always() && (needs.backend-tests.result == 'failure' || needs.frontend-build.result == 'failure' || needs.pipeline-checks.result == 'failure')
+    steps:
+      - name: Send email on failure
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_HOST }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "🚨 CI Failure: NHS Intelligence"
+          body: "The CI checks failed on branch ${{ github.ref_name }}. Please check the results: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          to: ${{ secrets.ALERT_EMAIL }}
+          from: GitHub Actions CI Bot

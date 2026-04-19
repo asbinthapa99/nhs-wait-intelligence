@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nhs-intelligence-backend
+  labels:
+    app: nhs-backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nhs-backend
+  template:
+    metadata:
+      labels:
+        app: nhs-backend
+    spec:
+      containers:
+      - name: backend
+        image: nhs-intelligence-backend:latest
+        ports:
+        - containerPort: 8000
+        envFrom:
+        - secretRef:
+            name: nhs-credentials
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nhs-redis-cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:alpine
+        ports:
+        - containerPort: 6379

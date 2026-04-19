@@ -51,7 +51,7 @@
 2. **Transformation** — `inequality_score.py` aggregates by region+month, computes scores, writes to `processed_metrics`
 3. **API** — FastAPI routers query `processed_metrics` (fast, pre-computed) for all dashboard endpoints
 4. **AI** — `/api/ai-explain` queries `processed_metrics` to build context, calls Claude API, caches result in `ai_cache`
-5. **Frontend** — Next.js pages fetch from FastAPI at build-time for static props or client-side on mount; falls back to mock data if API is unreachable
+5. **Frontend** — Next.js pages fetch from FastAPI at build-time for static props or client-side on mount and render explicit empty/error states when live data is unavailable
 
 ## Database schema
 
@@ -66,7 +66,7 @@ ai_cache           -- hashed question → AI response (24h TTL)
 
 ## Key design decisions
 
-**Mock data fallback** — every API endpoint checks whether `processed_metrics` is populated. If not (e.g., dev environment without the pipeline run), it returns realistic mock data so the frontend always renders.
+**Live-data-only contract** — dashboard endpoints return real database-backed results only. If `processed_metrics` is empty, collection endpoints return empty arrays or zeroed summaries and detail endpoints return `404`. The frontend uses `/api/status/data` plus empty states instead of substituting synthetic rows.
 
 **Pre-computed metrics** — inequality scores are computed at ingest time and stored in `processed_metrics`. API endpoints never compute scores on the fly, keeping p99 latency under 50ms.
 
