@@ -125,17 +125,17 @@ export default function ICSPage() {
       <DataStatusBanner status={status} />
 
       {/* KPIs */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         {[
           { label: 'ICS tracked', value: filtered.length, sub: `Across ${new Set(filtered.map(r => r.parentRegion)).size} regions`, color: 'text-white' },
           { label: 'High risk', value: worseCount, sub: 'Inequality score > 65', color: 'text-red-400' },
           { label: 'Worsening', value: deterioratingCount, sub: `Of ${filtered.length} in view`, color: 'text-amber-400' },
         ].map((kpi, i) => (
           <motion.div key={kpi.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
-            className="card p-4">
-            <p className="text-[11px] uppercase tracking-widest text-slate-500 mb-1">{kpi.label}</p>
-            <p className={`text-3xl font-black ${kpi.color}`}>{kpi.value}</p>
-            <p className="text-xs text-slate-500 mt-1">{kpi.sub}</p>
+            className="card p-3 sm:p-4">
+            <p className="text-[10px] sm:text-[11px] uppercase tracking-widest text-slate-500 mb-1 leading-tight">{kpi.label}</p>
+            <p className={`text-2xl sm:text-3xl font-black ${kpi.color}`}>{kpi.value}</p>
+            <p className="text-[10px] sm:text-xs text-slate-500 mt-1 leading-tight">{kpi.sub}</p>
           </motion.div>
         ))}
       </div>

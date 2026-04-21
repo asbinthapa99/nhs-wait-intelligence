@@ -89,7 +89,7 @@ export default function MapPage() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {/* Map */}
-            <div className="relative md:col-span-2 rounded-2xl overflow-hidden border border-white/5 shadow-[0_8px_32px_0_rgba(0,0,0,0.2)] bg-[#1e293b]/70 backdrop-blur-xl" style={{ height: 500 }}>
+            <div className="relative md:col-span-2 rounded-2xl overflow-hidden border border-white/5 shadow-[0_8px_32px_0_rgba(0,0,0,0.2)] bg-[#1e293b]/70 backdrop-blur-xl h-[300px] sm:h-[400px] md:h-[500px]">
               <RegionMap
                 regions={regions}
                 selectedRegionId={selected?.id ?? null}

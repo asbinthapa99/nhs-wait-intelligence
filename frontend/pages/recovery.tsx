@@ -158,7 +158,7 @@ export default function RecoveryPage() {
     return (
       <div className="animate-pulse space-y-6 max-w-5xl mx-auto">
         <div className="h-8 w-72 bg-slate-800 rounded" />
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="h-48 bg-slate-800 rounded-2xl" />
           <div className="h-48 bg-slate-800 rounded-2xl" />
         </div>
@@ -223,15 +223,16 @@ export default function RecoveryPage() {
                 : <Clock size={18} className="text-red-400 mt-0.5 shrink-0" />
               }
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 mb-1">
+                <div className="flex flex-wrap items-center gap-2 mb-1">
                   <span className="text-sm font-semibold text-white">{m.label}</span>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${m.status === 'met' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
                     {m.status === 'met' ? 'MET' : 'NOT MET'}
                   </span>
                 </div>
                 <p className="text-xs text-slate-500">{m.detail}</p>
+                <p className="text-xs text-slate-600 mt-1 sm:hidden">{m.target}</p>
               </div>
-              <span className="text-xs text-slate-500 shrink-0 font-medium">{m.target}</span>
+              <span className="text-xs text-slate-500 shrink-0 font-medium hidden sm:block">{m.target}</span>
             </div>
           ))}
         </div>
