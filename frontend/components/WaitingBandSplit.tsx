@@ -12,73 +12,72 @@ const fmtV = (val: number) => {
   return val.toString()
 }
 
+const BANDS = [
+  { name: 'Under 18 weeks', color: '#005eb8', bgColor: 'bg-blue-50', textColor: 'text-[#005eb8]', borderColor: 'border-blue-200' },
+  { name: '18 to 52 weeks', color: '#f59e0b', bgColor: 'bg-amber-50', textColor: 'text-amber-600', borderColor: 'border-amber-200' },
+  { name: 'Over 52 weeks',  color: '#ef4444', bgColor: 'bg-red-50',   textColor: 'text-red-600',   borderColor: 'border-red-200' },
+]
+
 export default function WaitingBandSplit({ totalWaiting, pctOver18Weeks }: WaitingBandSplitProps) {
   const over18 = (pctOver18Weeks / 100) * totalWaiting
   const under18 = totalWaiting - over18
-  const over52 = over18 * 0.086          // ~8.6% of over-18 = over-52 weeks
+  const over52 = over18 * 0.086
   const between18And52 = over18 - over52
 
   const bands = [
-    { name: 'Under 18 weeks', value: under18, color: '#1d4ed8' },
-    { name: '18 to 52 weeks', value: between18And52, color: '#f59e0b' },
-    { name: 'Over 52 weeks', value: over52, color: '#ef4444' },
+    { ...BANDS[0], value: under18 },
+    { ...BANDS[1], value: between18And52 },
+    { ...BANDS[2], value: over52 },
   ]
 
   const total = bands.reduce((s, b) => s + b.value, 0) || 1
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm h-full flex flex-col">
-      <div className="mb-2">
-        <h2 className="text-base font-bold text-slate-800">Waiting time distribution</h2>
-        <p className="text-xs text-slate-400 mt-0.5">
-          {fmtV(totalWaiting)} total pathways
-        </p>
-      </div>
-
-      <div className="flex-grow min-h-[200px] relative">
+    <div className="flex flex-col h-full w-full">
+      <div className="h-[220px] w-full relative">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={bands}
               cx="50%"
               cy="50%"
-              innerRadius="55%"
-              outerRadius="80%"
+              innerRadius="60%"
+              outerRadius="90%"
               paddingAngle={2}
               dataKey="value"
               stroke="none"
               startAngle={90}
               endAngle={-270}
             >
-              {bands.map((b, i) => (
-                <Cell key={i} fill={b.color} />
-              ))}
+              {bands.map((b, i) => <Cell key={i} fill={b.color} />)}
             </Pie>
             <Tooltip
-              formatter={(v: number) => [fmtV(v), 'Waiting']}
-              contentStyle={{
-                background: '#fff',
-                border: '1px solid #e2e8f0',
-                borderRadius: 8,
-                fontSize: 12,
-              }}
+              formatter={(v: number) => [fmtV(v), 'Patients']}
+              contentStyle={{ background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: 13, color: '#f8fafc', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}
+              itemStyle={{ color: '#f8fafc', fontWeight: 'bold' }}
+              labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
             />
           </PieChart>
         </ResponsiveContainer>
+        {/* Center label */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+          <span className="text-3xl font-black text-slate-900">{fmtV(totalWaiting)}</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Total Wait</span>
+        </div>
       </div>
 
-      <div className="mt-3 flex flex-col gap-2.5">
+      <div className="mt-6 space-y-3">
         {bands.map((b) => {
           const pct = ((b.value / total) * 100).toFixed(1)
           return (
-            <div key={b.name} className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: b.color }} />
-                <span className="text-slate-600">{b.name}</span>
+            <div key={b.name} className={`flex items-center justify-between px-4 py-3 rounded-2xl border ${b.bgColor} ${b.borderColor} shadow-sm`}>
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 rounded-full shadow-inner" style={{ backgroundColor: b.color }} />
+                <span className={`text-xs font-extrabold uppercase tracking-wide ${b.textColor}`}>{b.name}</span>
               </div>
               <div className="flex items-center gap-4">
-                <span className="font-bold text-slate-800 w-14 text-right">{fmtV(b.value)}</span>
-                <span className="text-slate-400 w-10 text-right">{pct}%</span>
+                <span className="text-sm font-black text-slate-800 tabular-nums">{fmtV(b.value)}</span>
+                <span className={`text-[11px] font-black tabular-nums bg-white px-2 py-1 rounded-md ${b.textColor}`}>{pct}%</span>
               </div>
             </div>
           )

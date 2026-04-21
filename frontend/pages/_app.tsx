@@ -7,20 +7,25 @@ import Layout from '../components/Layout'
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter()
+  const isLandingPage = router.pathname === '/landing'
+
+  const content = (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={router.pathname}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -6 }}
+        transition={{ duration: 0.25, ease: 'easeOut' }}
+      >
+        <Component {...pageProps} />
+      </motion.div>
+    </AnimatePresence>
+  )
 
   return (
-    <Layout>
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={router.pathname}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.3, ease: 'easeOut' }}
-        >
-          <Component {...pageProps} />
-        </motion.div>
-      </AnimatePresence>
-    </Layout>
+    <div data-theme="nhsdark">
+      {isLandingPage ? content : <Layout>{content}</Layout>}
+    </div>
   )
 }

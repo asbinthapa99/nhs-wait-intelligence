@@ -2,7 +2,77 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Leaflet overrides — prevent SSR flash */
-.leaflet-container {
-  background: #e8f0f7;
+/* Leaflet overrides */
+.leaflet-container { background: #0f172a; }
+.leaflet-tooltip-dark {
+  background: rgba(15, 23, 42, 0.95) !important;
+  border: 1px solid rgba(51, 65, 85, 0.8) !important;
+  border-radius: 8px !important;
+  color: #e2e8f0 !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4) !important;
+  padding: 6px 10px !important;
+}
+.leaflet-tooltip-dark::before { display: none !important; }
+
+/* shadcn CSS variables */
+@layer base {
+  :root {
+    --background: 222 47% 5%;
+    --foreground: 210 40% 90%;
+    --card: 222 47% 8%;
+    --card-foreground: 210 40% 90%;
+    --popover: 222 47% 8%;
+    --popover-foreground: 210 40% 90%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 47% 5%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 90%;
+    --muted: 217 33% 12%;
+    --muted-foreground: 215 20% 50%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 90%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 90%;
+    --border: 217 33% 15%;
+    --input: 217 33% 15%;
+    --ring: 217 91% 60%;
+    --radius: 0.75rem;
+  }
+  * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+  body { background-color: #070d1a; color: #e2e8f0; font-family: Inter, system-ui, sans-serif; }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: #0f172a; }
+  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+}
+
+/* Dark recharts tooltip */
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: #1e293b !important;
+  border: 1px solid #334155 !important;
+  border-radius: 10px !important;
+  color: #e2e8f0 !important;
+  font-size: 12px !important;
+}
+
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.8); }
+}
+.live-dot { animation: live-pulse 2s ease-in-out infinite; }
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fade-up 0.4s ease-out forwards; }
+
+/* Shimmer skeleton */
+.shimmer {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }

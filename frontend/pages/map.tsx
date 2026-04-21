@@ -1,5 +1,7 @@
 import dynamic from 'next/dynamic'
 import { useEffect, useMemo, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { MapPin, RefreshCw, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react'
 
 import DataStatusBanner from '../components/DataStatusBanner'
 import EmptyStateCard from '../components/EmptyStateCard'
@@ -7,17 +9,24 @@ import { DataStatus, getDataStatus, getRegions, RegionDetail } from '../lib/api'
 
 const RegionMap = dynamic(() => import('../components/RegionMap'), { ssr: false })
 
-const TREND_COLORS = {
-  deteriorating: 'text-red-600 bg-red-50',
-  stable: 'text-amber-600 bg-amber-50',
-  improving: 'text-green-600 bg-green-50',
+const TREND_PILL: Record<string, string> = {
+  deteriorating: 'text-red-400 bg-red-500/10 border border-red-500/20',
+  stable: 'text-amber-400 bg-amber-500/10 border border-amber-500/20',
+  improving: 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20',
 }
 
 function scoreColor(score: number) {
   if (score >= 75) return 'bg-red-500'
   if (score >= 55) return 'bg-amber-500'
   if (score >= 40) return 'bg-yellow-400'
-  return 'bg-green-500'
+  return 'bg-emerald-500'
+}
+
+function scoreBadgeColor(score: number) {
+  if (score >= 75) return 'text-red-400'
+  if (score >= 55) return 'text-amber-400'
+  if (score >= 40) return 'text-yellow-400'
+  return 'text-emerald-400'
 }
 
 export default function MapPage() {
@@ -26,34 +35,22 @@ export default function MapPage() {
   const [status, setStatus] = useState<DataStatus | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [listOpen, setListOpen] = useState(false)
 
   const loadRegions = async () => {
-    setIsLoading(true)
-    setError(null)
-
-    const [regionsResult, statusResult] = await Promise.allSettled([getRegions(), getDataStatus()])
-
-    if (regionsResult.status === 'fulfilled') {
-      setRegions(regionsResult.value)
-    } else {
-      setRegions([])
-      setError('Map data could not be loaded from the API. Check the backend connection and retry.')
-    }
-
-    if (statusResult.status === 'fulfilled') {
-      setStatus(statusResult.value)
-    }
-
+    setIsLoading(true); setError(null)
+    const [regRes, statusRes] = await Promise.allSettled([getRegions(), getDataStatus()])
+    setRegions(regRes.status === 'fulfilled' ? regRes.value : [])
+    if (regRes.status === 'rejected') setError('Map data could not be loaded from the API.')
+    if (statusRes.status === 'fulfilled') setStatus(statusRes.value)
     setIsLoading(false)
   }
 
-  useEffect(() => {
-    void loadRegions()
-  }, [])
+  useEffect(() => { void loadRegions() }, [])
 
   useEffect(() => {
     if (!selected) return
-    const synced = regions.find((region) => region.id === selected.id) || null
+    const synced = regions.find(r => r.id === selected.id) || null
     setSelected(synced)
   }, [regions, selected?.id])
 
@@ -63,116 +60,155 @@ export default function MapPage() {
   )
 
   return (
-    <>
-      <div className="mb-5">
-        <h1 className="text-xl font-bold text-slate-800">Regional inequality map</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Pinch, scroll, or double-click to zoom. Region outlines and centers come from backend map metadata.
-        </p>
+    <div className="space-y-5">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-white">Regional Inequality Map</h1>
+        <p className="text-sm text-slate-400 mt-1">Pinch, scroll, or double-click to zoom. Select a region for details.</p>
       </div>
 
       <DataStatusBanner status={status} loading={isLoading && !status} />
 
-      {error ? (
-        <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 flex items-center justify-between gap-2">
+      {error && (
+        <div className="alert border border-red-500/20 bg-red-500/10 text-red-300 text-sm rounded-xl">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
           <span>{error}</span>
-          <button
-            onClick={() => void loadRegions()}
-            className="rounded-md border border-rose-300 bg-white px-2.5 py-1 text-xs font-semibold hover:bg-rose-100"
-          >
-            Retry
+          <button onClick={() => void loadRegions()} className="btn btn-xs btn-ghost ml-auto gap-1">
+            <RefreshCw className="w-3 h-3" /> Retry
           </button>
         </div>
-      ) : null}
+      )}
 
       {!regions.length && !isLoading ? (
         <EmptyStateCard
-          title="No regional map data available yet"
-          body="The API does not have any processed regional metrics loaded. Run the pipeline to populate regions and boundary metadata."
-          actionLabel="Retry"
-          onAction={() => void loadRegions()}
+          title="No regional map data available"
+          body="Run the pipeline to populate regions and boundary metadata."
+          actionLabel="Retry" onAction={() => void loadRegions()}
         />
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div className="relative md:col-span-2 bg-white rounded-2xl border border-slate-200 overflow-hidden" style={{ height: 480 }}>
+            {/* Map */}
+            <div className="relative md:col-span-2 rounded-2xl overflow-hidden border border-white/5 shadow-[0_8px_32px_0_rgba(0,0,0,0.2)] bg-[#1e293b]/70 backdrop-blur-xl" style={{ height: 500 }}>
               <RegionMap
                 regions={regions}
                 selectedRegionId={selected?.id ?? null}
                 onSelectRegion={setSelected}
               />
-              {isLoading ? (
-                <div className="absolute inset-0 bg-white/65 backdrop-blur-[1px] flex items-center justify-center">
-                  <p className="text-sm text-slate-600 font-medium">Loading map data...</p>
+              {isLoading && (
+                <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center">
+                  <div className="flex items-center gap-2 text-slate-300 text-sm">
+                    <span className="loading loading-spinner loading-sm" />
+                    Loading map data…
+                  </div>
                 </div>
-              ) : null}
+              )}
+              {selected && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="absolute bottom-4 left-4 right-4 md:left-4 md:right-auto md:w-72 bg-[#0f172a]/90 backdrop-blur-2xl border border-white/10 rounded-2xl p-4 shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className="font-semibold text-white">{selected.name}</p>
+                      <p className="text-xs text-slate-400 tracking-wider">{selected.region_code}</p>
+                    </div>
+                    <button onClick={() => setSelected(null)} className="text-slate-500 hover:text-white text-lg leading-none transition-colors">&times;</button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    {[
+                      { label: 'Waiting', value: `${(selected.total_waiting / 1e6).toFixed(2)}M` },
+                      { label: 'Over 18w', value: `${selected.pct_over_18_weeks}%`, color: 'text-amber-400' },
+                      { label: 'Deprivation', value: `${(selected.deprivation_index * 100).toFixed(0)}/100` },
+                      { label: 'Backlog rate', value: `${selected.backlog_rate_per_100k}/100k` },
+                    ].map(item => (
+                      <div key={item.label} className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-2.5">
+                        <p className="text-[10px] text-slate-500 uppercase tracking-wide">{item.label}</p>
+                        <p className={`font-bold text-sm mt-0.5 ${item.color ?? 'text-white'}`}>{item.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 flex items-center justify-between border-t border-slate-700/50 pt-3">
+                    <span className={`text-xs px-2.5 py-1 rounded-md font-bold uppercase tracking-wider ${TREND_PILL[selected.trend] ?? TREND_PILL.stable}`}>
+                      {selected.trend}
+                    </span>
+                    <span className={`text-sm font-bold bg-[#1e293b] px-3 py-1 rounded-lg border border-slate-700 ${scoreBadgeColor(selected.inequality_score)}`}>
+                      Score {selected.inequality_score}
+                    </span>
+                  </div>
+                </motion.div>
+              )}
             </div>
 
-            <div className="bg-white rounded-2xl border border-slate-200 p-4 flex flex-col gap-2 overflow-y-auto" style={{ maxHeight: 480 }}>
-              <h2 className="text-sm font-semibold text-slate-700 mb-1">All regions</h2>
-              {sortedRegions.map((r) => (
-                <button
-                  key={r.id}
-                  onClick={() => setSelected(selected?.id === r.id ? null : r)}
-                  className={`text-left rounded-xl border p-3 transition-all ${
-                    selected?.id === r.id
-                      ? 'border-nhs-blue bg-blue-50'
-                      : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-slate-800">{r.name}</span>
-                    <div className="flex items-center gap-1.5">
-                      <div className={`w-2.5 h-2.5 rounded-full ${scoreColor(r.inequality_score)}`} />
-                      <span className="text-sm font-bold text-slate-700">{r.inequality_score}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TREND_COLORS[r.trend]}`}>
-                      {r.trend}
-                    </span>
-                    <span className="text-xs text-slate-400">{r.pct_over_18_weeks}% over 18w</span>
-                  </div>
-
-                  {selected?.id === r.id ? (
-                    <div className="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs text-slate-600">
-                      <div>
-                        <p className="text-slate-400 uppercase tracking-wide text-[10px]">Waiting</p>
-                        <p className="font-semibold text-slate-800">{(r.total_waiting / 1e6).toFixed(2)}M</p>
+            {/* Region list — collapsible on mobile */}
+            <div className="flex flex-col bg-[#1e293b]/70 backdrop-blur-xl border border-white/5 rounded-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.2)]">
+              <button
+                onClick={() => setListOpen(v => !v)}
+                className="md:hidden flex items-center justify-between w-full p-4 text-left border-b border-white/5"
+              >
+                <h2 className="text-sm font-semibold text-slate-200">All regions ({sortedRegions.length})</h2>
+                {listOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+              </button>
+              <div className={`md:block ${listOpen ? 'block' : 'hidden'} p-4 pt-0 md:pt-4 overflow-y-auto`} style={{ maxHeight: 452 }}>
+                <h2 className="hidden md:block text-sm font-semibold text-slate-200 mb-3 tracking-wide">All regions</h2>
+                <div className="space-y-2">
+                  {sortedRegions.map(r => (
+                    <motion.button
+                      key={r.id}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setSelected(selected?.id === r.id ? null : r)}
+                      className={`w-full text-left rounded-xl border p-3 transition-all ${
+                        selected?.id === r.id
+                          ? 'border-blue-500/40 bg-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.15)]'
+                          : 'border-slate-700/50 hover:border-slate-500/50 hover:bg-[#0f172a]/50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-slate-100 truncate">{r.name}</span>
+                        <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                          <div className={`w-2.5 h-2.5 rounded-sm ${scoreColor(r.inequality_score)}`} />
+                          <span className={`text-sm font-black ${scoreBadgeColor(r.inequality_score)}`}>{r.inequality_score}</span>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-slate-400 uppercase tracking-wide text-[10px]">Deprivation</p>
-                        <p className="font-semibold text-slate-800">{(r.deprivation_index * 100).toFixed(0)}/100</p>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-widest ${TREND_PILL[r.trend] ?? TREND_PILL.stable}`}>
+                          {r.trend}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-medium">{r.pct_over_18_weeks}% over 18w</span>
                       </div>
-                      <div>
-                        <p className="text-slate-400 uppercase tracking-wide text-[10px]">Backlog rate</p>
-                        <p className="font-semibold text-slate-800">{r.backlog_rate_per_100k}/100k</p>
-                      </div>
-                      <div>
-                        <p className="text-slate-400 uppercase tracking-wide text-[10px]">Region code</p>
-                        <p className="font-semibold text-slate-800">{r.region_code}</p>
-                      </div>
-                    </div>
-                  ) : null}
-                </button>
-              ))}
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="mt-4 bg-white rounded-2xl border border-slate-200 p-4">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Inequality score legend</p>
-            <div className="flex flex-wrap gap-4 text-xs text-slate-600">
-              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500" /><span>75-100 Critical</span></div>
-              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-amber-500" /><span>55-74 High</span></div>
-              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-yellow-400" /><span>40-54 Moderate</span></div>
-              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-green-500" /><span>0-39 Low</span></div>
+          {/* Legend */}
+          <div className="bg-[#1e293b]/70 backdrop-blur-xl border border-white/5 rounded-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.2)] p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <MapPin className="w-4 h-4 text-slate-400" />
+              <p className="text-xs font-bold text-slate-300 uppercase tracking-widest">Inequality score legend</p>
             </div>
-            <p className="text-xs text-slate-400 mt-2">
-              Score = (% over 18w x 0.40) + (backlog growth x 0.35) + (deprivation x 0.25). Normalised 0-100.
+            <div className="flex flex-wrap gap-4 text-xs font-semibold text-slate-300 mb-3">
+              {[
+                { dot: 'bg-red-500', label: '75–100 Critical' },
+                { dot: 'bg-amber-500', label: '55–74 High' },
+                { dot: 'bg-yellow-400', label: '40–54 Moderate' },
+                { dot: 'bg-emerald-500', label: '0–39 Low' },
+              ].map(item => (
+                <div key={item.label} className="flex items-center gap-2 bg-[#0f172a] px-3 py-1.5 rounded-lg border border-slate-700/50">
+                  <div className={`w-2.5 h-2.5 rounded-sm ${item.dot}`} />
+                  <span>{item.label}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">
+              Score = (% over 18w × 0.40) + (backlog growth × 0.35) + (deprivation × 0.25). Normalised 0–100.
             </p>
           </div>
         </>
       )}
-    </>
+    </div>
   )
 }

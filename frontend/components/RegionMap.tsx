@@ -1,5 +1,4 @@
-import { Fragment } from 'react'
-import { MapContainer, TileLayer, CircleMarker, Polygon, Popup } from 'react-leaflet'
+import { MapContainer, TileLayer, CircleMarker, Tooltip } from 'react-leaflet'
 import { RegionDetail } from '../lib/api'
 
 const REGION_COORDS: Record<string, [number, number]> = {
@@ -13,10 +12,10 @@ const REGION_COORDS: Record<string, [number, number]> = {
 }
 
 function scoreColor(score: number) {
-  if (score >= 75) return '#e05252'
-  if (score >= 55) return '#d97706'
+  if (score >= 75) return '#ef4444'
+  if (score >= 55) return '#f59e0b'
   if (score >= 40) return '#eab308'
-  return '#16a34a'
+  return '#22c55e'
 }
 
 interface RegionMapProps {
@@ -25,30 +24,16 @@ interface RegionMapProps {
   onSelectRegion?: (region: RegionDetail) => void
 }
 
-function toLeafletPolygon(boundary: RegionDetail['boundary_geojson']) {
-  if (!boundary) return null
-
-  if (boundary.type === 'Polygon') {
-    const coordinates = boundary.coordinates as number[][][]
-    return coordinates.map((ring) => ring.map(([lng, lat]) => [lat, lng] as [number, number]))
-  }
-
-  const coordinates = boundary.coordinates as number[][][][]
-  return coordinates.map((polygon) =>
-    polygon.map((ring) => ring.map(([lng, lat]) => [lat, lng] as [number, number]))
-  )
-}
-
 export default function RegionMap({ regions = [], selectedRegionId = null, onSelectRegion }: RegionMapProps) {
   return (
     <MapContainer
-      center={[52.5, -1.5]}
+      center={[52.8, -1.8]}
       zoom={6}
       minZoom={5}
       maxZoom={10}
       maxBounds={[[49.5, -8.7], [56.5, 2.3]]}
       maxBoundsViscosity={0.9}
-      style={{ height: '100%', width: '100%', borderRadius: '12px' }}
+      style={{ height: '100%', width: '100%', borderRadius: '12px', background: '#0f172a' }}
       scrollWheelZoom
       touchZoom
       doubleClickZoom
@@ -58,7 +43,7 @@ export default function RegionMap({ regions = [], selectedRegionId = null, onSel
     >
       <TileLayer
         attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
       />
       {regions.map((r) => {
         const coords: [number, number] | undefined =
@@ -68,62 +53,36 @@ export default function RegionMap({ regions = [], selectedRegionId = null, onSel
 
         if (!coords) return null
 
-        const polygonPositions = toLeafletPolygon(r.boundary_geojson)
         const color = scoreColor(r.inequality_score)
         const isSelected = selectedRegionId === r.id
+        const radius = isSelected ? 28 : Math.max(18, Math.min(26, r.inequality_score / 4))
 
         return (
-          <Fragment key={`layer-${r.id}`}>
-            {polygonPositions ? (
-              <Polygon
-                positions={polygonPositions}
-                pathOptions={{
-                  color,
-                  fillColor: color,
-                  fillOpacity: isSelected ? 0.36 : 0.24,
-                  weight: isSelected ? 3 : 2,
-                }}
-                eventHandlers={{ click: () => onSelectRegion?.(r) }}
-              >
-                <Popup>
-                  <div className="text-sm">
-                    <p className="font-semibold text-slate-800 mb-1">{r.name}</p>
-                    <p className="text-slate-600">Inequality score: <strong>{r.inequality_score}</strong></p>
-                    <p className="text-slate-600">Over 18 weeks: <strong>{r.pct_over_18_weeks}%</strong></p>
-                    <p className="text-slate-600">Waiting: <strong>{(r.total_waiting / 1e6).toFixed(2)}M</strong></p>
-                  </div>
-                </Popup>
-              </Polygon>
-            ) : null}
-
-            <CircleMarker
-              center={coords}
-              radius={Math.max(10, r.inequality_score / 5)}
-              pathOptions={{
-                color,
-                fillColor: color,
-                fillOpacity: 0.85,
-                weight: isSelected ? 3 : 2,
-              }}
-              eventHandlers={{ click: () => onSelectRegion?.(r) }}
+          <CircleMarker
+            key={`marker-${r.id}`}
+            center={coords}
+            radius={radius}
+            pathOptions={{
+              color: isSelected ? '#ffffff' : color,
+              fillColor: color,
+              fillOpacity: isSelected ? 0.95 : 0.75,
+              weight: isSelected ? 3 : 1.5,
+            }}
+            eventHandlers={{ click: () => onSelectRegion?.(r) }}
+          >
+            <Tooltip
+              permanent={false}
+              direction="top"
+              offset={[0, -radius - 4]}
+              className="leaflet-tooltip-dark"
             >
-              <Popup>
-                <div className="text-sm">
-                  <p className="font-semibold text-slate-800 mb-1">{r.name}</p>
-                  <p className="text-slate-600">Inequality score: <strong>{r.inequality_score}</strong></p>
-                  <p className="text-slate-600">Over 18 weeks: <strong>{r.pct_over_18_weeks}%</strong></p>
-                  <p className="text-slate-600">Waiting: <strong>{(r.total_waiting / 1e6).toFixed(2)}M</strong></p>
-                  <p className={`mt-1 font-medium ${
-                    r.trend === 'deteriorating' ? 'text-red-600' :
-                    r.trend === 'improving' ? 'text-green-600' : 'text-amber-600'
-                  }`}>
-                    {r.trend === 'deteriorating' ? 'Deteriorating' :
-                     r.trend === 'improving' ? 'Improving' : 'Stable'}
-                  </p>
-                </div>
-              </Popup>
-            </CircleMarker>
-          </Fragment>
+              <div style={{ fontSize: 12, lineHeight: 1.4 }}>
+                <div style={{ fontWeight: 700, marginBottom: 2 }}>{r.name}</div>
+                <div>Score: <strong style={{ color }}>{r.inequality_score}</strong></div>
+                <div>{r.pct_over_18_weeks}% over 18w</div>
+              </div>
+            </Tooltip>
+          </CircleMarker>
         )
       })}
     </MapContainer>

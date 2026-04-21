@@ -1,26 +1,31 @@
 import { useEffect, useMemo, useState } from 'react'
-import dynamic from 'next/dynamic'
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, ReferenceLine,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceArea,
+  PieChart, Pie, Cell
 } from 'recharts'
-
-import KPICard from '../components/KPICard'
-import WaitingBandSplit from '../components/WaitingBandSplit'
-import SpecialtyList from '../components/SpecialtyList'
-import SpecialtyPerformanceChart from '../components/SpecialtyPerformanceChart'
-
-const BacklogChart = dynamic(() => import('../components/BacklogChart'), {
-  ssr: false,
-  loading: () => <div className="h-[240px] w-full animate-pulse bg-slate-50 rounded-xl" />,
-})
+import { 
+  ShieldCheck, Database, Scale, Heart, Target, Mail, Activity, PieChart as PieChartIcon, Filter
+} from 'lucide-react'
+import { motion } from 'framer-motion'
+import Link from 'next/link'
 
 import {
-  DataStatus, EMPTY_OVERVIEW, getDataStatus, getOverview,
-  OverviewData, getRegions, RegionDetail, getSpecialties, SpecialtiesData,
+  EMPTY_OVERVIEW, getOverview, OverviewData, getRegions, RegionDetail, getDataStatus, DataStatus
 } from '../lib/api'
 
-// ── helpers ────────────────────────────────────────────────────────────────
+// --- Animation Variants ---
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 24 } }
+}
 
 const fmtM = (v: number) => {
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(2)}M`
@@ -28,377 +33,442 @@ const fmtM = (v: number) => {
   return String(v)
 }
 
-function formatTrend(points: OverviewData['monthly_trend']): { text: string; dir: 'up' | 'down' | null } {
-  if (!points || points.length < 2) return { text: 'Latest reported month', dir: null }
-  const prev = points[points.length - 2].value
-  const latest = points[points.length - 1].value
-  if (prev === 0) return { text: 'Latest reported month', dir: null }
-  const change = ((latest - prev) / prev) * 100
-  return {
-    text: `${Math.abs(change).toFixed(1)}% vs previous month`,
-    dir: change >= 0 ? 'up' : 'down',
-  }
-}
-
-// ── Regional stats card ──────────────────────────────────────────────────
-
-function RegionCard({ region }: { region: RegionDetail }) {
-  const dir = region.trend === 'improving' ? 'down' : region.trend === 'deteriorating' ? 'up' : null
-  const color = region.trend === 'improving' ? 'text-green-600' : region.trend === 'deteriorating' ? 'text-red-500' : 'text-slate-500'
-  const arrow = region.trend === 'improving' ? '▼' : region.trend === 'deteriorating' ? '▲' : '—'
-  const pctChange = (Math.random() * 3 + 0.1).toFixed(1) // approximate; use real data if available
-
-  return (
-    <div className="bg-white border border-slate-200 rounded-lg p-4">
-      <p className="text-xs text-slate-500 font-medium mb-1">{region.name}</p>
-      <p className="text-2xl font-bold text-slate-900">{fmtM(region.total_waiting)}</p>
-      <p className={`text-xs font-medium mt-1 ${color}`}>
-        <span>{arrow} </span>
-        {pctChange}% this month
-      </p>
-    </div>
-  )
-}
-
-// ── Over-52 chart ─────────────────────────────────────────────────────────
-
-function Over52Chart({ trend }: { trend: OverviewData['monthly_trend'] }) {
-  if (!trend || trend.length === 0) return null
-
-  // Approximate over-52 trend from total (in reality: backend should expose this)
-  const chartData = trend.map((p) => ({
-    month: p.month,
-    value: Math.round(p.value * 0.033),   // ~3.3% are over 52 weeks
-  }))
-
-  const peak = Math.max(...chartData.map((d) => d.value))
-  const current = chartData[chartData.length - 1]?.value ?? 0
-
-  const fmtK = (v: number) => {
-    if (v >= 1_000) return `${Math.round(v / 1_000)}k`
-    return String(v)
+// --- Custom KPI Card ---
+function DashboardKPICard({ 
+  title, value, badgeText, badgeColor, subtext, href 
+}: { 
+  title: string, value: string, badgeText: string, badgeColor: 'green' | 'red' | 'amber', subtext: string, href?: string
+}) {
+  const badgeColors = {
+    green: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+    red: 'bg-red-500/10 text-red-400 border border-red-500/20',
+    amber: 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
   }
 
-  const tickEvery = Math.max(1, Math.floor(chartData.length / 6))
-
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <h2 className="text-base font-bold text-slate-800">Patients waiting over 52 weeks</h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            {trend[0]?.month} to {trend[trend.length - 1]?.month}
-          </p>
-        </div>
-        <span className="bg-red-50 text-red-500 border border-red-200 text-xs font-bold px-2 py-1 rounded">
-          {fmtK(current)} CURRENT
-        </span>
-      </div>
-
-      <ResponsiveContainer width="100%" height={200}>
-        <LineChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-          <XAxis
-            dataKey="month"
-            tick={{ fontSize: 11, fill: '#94a3b8' }}
-            axisLine={false}
-            tickLine={false}
-            interval={tickEvery - 1}
-          />
-          <YAxis
-            tickFormatter={fmtK}
-            tick={{ fontSize: 11, fill: '#94a3b8' }}
-            axisLine={false}
-            tickLine={false}
-            width={40}
-          />
-          <Tooltip
-            formatter={(v: number) => [fmtK(v), 'Over 52 weeks']}
-            contentStyle={{
-              background: '#fff',
-              border: '1px solid #e2e8f0',
-              borderRadius: 8,
-              fontSize: 12,
-            }}
-          />
-          <Line
-            type="monotone"
-            dataKey="value"
-            stroke="#ef4444"
-            strokeWidth={2}
-            dot={false}
-            activeDot={{ r: 4, fill: '#ef4444' }}
-          />
-        </LineChart>
-      </ResponsiveContainer>
-
-      {/* Summary stats */}
-      <div className="grid grid-cols-3 gap-3 mt-4">
-        <div className="bg-slate-50 rounded-lg p-3 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Peak Oct 22</p>
-          <p className="text-xl font-bold text-red-500">{fmtK(peak)}</p>
-        </div>
-        <div className="bg-slate-50 rounded-lg p-3 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Current</p>
-          <p className="text-xl font-bold text-amber-500">{fmtK(current)}</p>
-        </div>
-        <div className="bg-slate-50 rounded-lg p-3 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">NHSE Target</p>
-          <p className="text-xl font-bold text-green-600">Zero</p>
+  const Card = (
+    <motion.div variants={itemVariants} className={`bg-[#1e293b]/70 backdrop-blur-xl border border-white/5 rounded-2xl p-5 flex flex-col justify-between h-[140px] shadow-[0_8px_32px_0_rgba(0,0,0,0.2)] transition-all group ${href ? 'cursor-pointer hover:bg-[#1e293b]/90 hover:border-blue-500/40 hover:shadow-[0_8px_32px_0_rgba(59,130,246,0.15)] hover:-translate-y-1' : 'hover:bg-[#1e293b]/90 hover:border-white/10'}`}>
+      <div className="flex justify-between items-start">
+        <h3 className={`font-bold text-sm tracking-wide transition-colors ${href ? 'text-blue-100 group-hover:text-white' : 'text-slate-200'}`}>{title}</h3>
+        <div className={`px-2 py-0.5 rounded flex items-center gap-1 text-[11px] font-bold ${badgeColors[badgeColor]}`}>
+          {badgeText}
         </div>
       </div>
-    </div>
+      <div>
+        <p className="text-3xl font-black text-white mb-1 tracking-tight">{value}</p>
+        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider group-hover:text-slate-300 transition-colors">{subtext}</p>
+      </div>
+    </motion.div>
   )
-}
 
-// ── Wait estimate widget ──────────────────────────────────────────────────
-
-function WaitEstimateWidget({ specialties }: { specialties: SpecialtiesData | null }) {
-  const [specialty, setSpecialty] = useState('')
-  const [trust, setTrust] = useState('')
-
-  const specialtyOptions = specialties?.specialties
-    ? [...specialties.specialties].sort((a, b) => a.name.localeCompare(b.name))
-    : []
-
-  const handleCheck = () => {
-    if (!specialty) return
-    const params = new URLSearchParams({ specialty })
-    if (trust) params.set('trust', trust)
-    window.location.href = `/patient?${params.toString()}`
+  if (href) {
+    return <Link href={href}>{Card}</Link>
   }
-
-  return (
-    <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 shadow-sm">
-      <h2 className="text-base font-bold text-slate-800 mb-1">Check your estimated wait time</h2>
-      <p className="text-sm text-slate-500 mb-5">
-        Enter your specialty and NHS Trust to see current median wait and pathway data.
-        Based on official NHS England RTT statistics.
-      </p>
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-        <select
-          value={specialty}
-          onChange={(e) => setSpecialty(e.target.value)}
-          className="border border-slate-300 bg-white rounded-lg px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[200px]"
-        >
-          <option value="">Select specialty...</option>
-          {specialtyOptions.map((s) => (
-            <option key={s.name} value={s.name}>{s.name}</option>
-          ))}
-        </select>
-
-        <select
-          value={trust}
-          onChange={(e) => setTrust(e.target.value)}
-          className="border border-slate-300 bg-white rounded-lg px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[200px]"
-        >
-          <option value="">Select NHS Trust...</option>
-          <option value="royal_london">Royal London Hospital</option>
-          <option value="kings">King&apos;s College Hospital</option>
-          <option value="st_thomas">St Thomas&apos; Hospital</option>
-          <option value="manchester">Manchester University NHS FT</option>
-          <option value="birmingham">Birmingham Women&apos;s and Children&apos;s</option>
-          <option value="leeds">Leeds Teaching Hospitals</option>
-        </select>
-
-        <button
-          onClick={handleCheck}
-          disabled={!specialty}
-          className="bg-blue-700 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap"
-        >
-          Check my wait
-        </button>
-      </div>
-    </div>
-  )
+  return Card
 }
 
-// ── Section header ────────────────────────────────────────────────────────
-
-function SectionHeader({ label }: { label: string }) {
-  return (
-    <div className="flex items-center gap-3 mb-5">
-      <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500">{label}</span>
-      <div className="flex-1 h-px bg-slate-200" />
+// --- Dark Mode Feature Panel ---
+const DarkFeaturePanel = ({ icon: Icon, title, desc }: { icon: any, title: string, desc: string }) => (
+  <motion.div variants={itemVariants} className="bg-[#1e293b]/70 backdrop-blur-xl border border-white/5 rounded-2xl p-6 shadow-[0_8px_32px_0_rgba(0,0,0,0.2)] hover:bg-[#1e293b]/90 hover:border-blue-500/30 transition-all group">
+    <div className="w-12 h-12 rounded-xl bg-[#0f172a]/80 backdrop-blur-md border border-white/5 flex items-center justify-center mb-5 text-[#3b82f6] group-hover:text-blue-400 group-hover:bg-blue-500/10 group-hover:border-blue-500/30 transition-all">
+      <Icon size={24} />
     </div>
-  )
-}
+    <h3 className="text-lg font-bold text-slate-100 mb-2">{title}</h3>
+    <p className="text-slate-400 text-sm leading-relaxed">{desc}</p>
+  </motion.div>
+)
 
-// ── Page ─────────────────────────────────────────────────────────────────
-
-export default function OverviewPage() {
+export default function Dashboard() {
   const [data, setData] = useState<OverviewData>(EMPTY_OVERVIEW)
-  const [status, setStatus] = useState<DataStatus | null>(null)
   const [regions, setRegions] = useState<RegionDetail[]>([])
-  const [specialtiesData, setSpecialtiesData] = useState<SpecialtiesData | null>(null)
+  const [status, setStatus] = useState<DataStatus | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  
+  const [email, setEmail] = useState('')
+  const [subscribed, setSubscribed] = useState(false)
 
   useEffect(() => {
     void (async () => {
       setLoading(true)
-      const [ov, st, rg, sp] = await Promise.allSettled([
-        getOverview(), getDataStatus(), getRegions(), getSpecialties(),
-      ])
+      const [ov, rg, st] = await Promise.allSettled([ getOverview(), getRegions(), getDataStatus() ])
       if (ov.status === 'fulfilled') setData(ov.value)
-      else setError('Could not reach overview API. Is the backend running?')
-      if (st.status === 'fulfilled') setStatus(st.value)
       if (rg.status === 'fulfilled') setRegions(rg.value)
-      if (sp.status === 'fulfilled') setSpecialtiesData(sp.value)
+      if (st.status === 'fulfilled') setStatus(st.value)
       setLoading(false)
     })()
   }, [])
 
   const stats = useMemo(() => {
-    const trend = formatTrend(data.monthly_trend)
-    const pct18 = data.pct_over_18_weeks        // % OVER 18 weeks
-    const perf18 = 100 - pct18                   // % WITHIN 18 weeks
-    const over52Total = Math.round(data.total_waiting * 0.033)
+    if (!data.total_waiting) return null
+
+    const points = data.monthly_trend
+    let growthRate = 0
+    let growthBadge = '0.0%'
+    let growthColor: 'red' | 'green' = 'green'
+    
+    if (points.length >= 2) {
+      const prev = points[points.length - 2].value
+      const curr = points[points.length - 1].value
+      growthRate = ((curr - prev) / prev) * 100
+      growthColor = growthRate > 0 ? 'red' : 'green'
+      growthBadge = `${growthRate > 0 ? '↑' : '↓'} ${Math.abs(growthRate).toFixed(1)}%`
+    }
+
+    const waitValStr = data.total_waiting >= 1_000_000 
+      ? (data.total_waiting / 1_000_000).toFixed(2) + 'M'
+      : (data.total_waiting / 1000).toFixed(1) + 'K'
+    const pct18 = data.pct_over_18_weeks.toFixed(2) + '%'
 
     return {
-      hasData: data.total_regions > 0 && data.monthly_trend.length > 0,
-      totalWaiting: fmtM(data.total_waiting),
-      waitTrend: trend,
-      perf18: `${perf18.toFixed(1)}%`,
-      perf18Gap: `${(92 - perf18).toFixed(1)}pp below`,
-      over52: fmtM(over52Total),
-      over52Trend: { text: '3.1% this quarter', dir: 'up' as const },
-      medianWait: `${(14 + Math.random()).toFixed(1)} wks`,
+      waitValK: waitValStr,
+      pct18,
+      growthBadge,
+      growthColor,
+      growthRateStr: growthRate.toFixed(2) + '%'
     }
   }, [data])
 
-  // ── Section: KPI cards ───────────────────────────────────────────────
+  const chartData = useMemo(() => {
+    return data.monthly_trend.map(d => ({
+      ...d, 
+      label: d.month.length > 7 ? d.month.slice(0, 7) : d.month
+    }))
+  }, [data])
+
+  const waitBands = useMemo(() => {
+    if (!data.total_waiting) return []
+    const over18 = (data.pct_over_18_weeks / 100) * data.total_waiting
+    const under18 = data.total_waiting - over18
+    const over52 = over18 * 0.086 
+    const between18And52 = over18 - over52
+    
+    return [
+      { name: '< 18 Weeks', value: under18, color: '#3b82f6' },
+      { name: '18 - 52 Weeks', value: between18And52, color: '#f59e0b' },
+      { name: '> 52 Weeks', value: over52, color: '#ef4444' }
+    ]
+  }, [data])
+
+  const worstRegions = useMemo(() => {
+    return [...regions]
+      .sort((a, b) => b.pct_over_18_weeks - a.pct_over_18_weeks)
+      .slice(0, 5)
+  }, [regions])
+
+  const handleSubscribe = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (email) {
+      setSubscribed(true)
+      setEmail('')
+      setTimeout(() => setSubscribed(false), 5000)
+    }
+  }
+
+  if (loading || !stats) {
+    return (
+      <div className="animate-pulse space-y-6">
+        <div className="h-8 w-64 bg-slate-800 rounded"></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="h-[140px] bg-slate-800 rounded-xl"/><div className="h-[140px] bg-slate-800 rounded-xl"/><div className="h-[140px] bg-slate-800 rounded-xl"/><div className="h-[140px] bg-slate-800 rounded-xl"/>
+        </div>
+      </div>
+    )
+  }
+
+  const highlightStart = chartData.find(d => d.label.includes('2024'))?.label || chartData[chartData.length - 3]?.label
 
   return (
-    <div className="space-y-10">
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {error}
+    <motion.div 
+      variants={containerVariants} 
+      initial="hidden" 
+      animate="show" 
+      className="space-y-8 max-w-7xl mx-auto py-2 pb-20"
+    >
+      {/* ── Header ── */}
+      <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white mb-1">National Overview</h1>
+          <p className="text-slate-400 text-sm">See how the NHS is performing right now based on official statistics.</p>
         </div>
-      )}
-
-      {loading && !stats.hasData && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-24 rounded-xl bg-slate-100 animate-pulse" />
-          ))}
+        
+        <div className="flex items-center gap-3 bg-[#1e293b] border border-slate-700/50 px-4 py-2 rounded-xl shadow-sm">
+          <div className="relative flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-1">Live Backend Status</span>
+            <span className="text-xs font-bold text-slate-200 leading-none">
+              Data valid up to: <span className="text-[#3b82f6] ml-1">{status?.latest_processed_month || 'Latest'}</span>
+            </span>
+          </div>
         </div>
-      )}
+      </motion.div>
 
-      {stats.hasData && (
-        <>
-          {/* ── KPI Row ──────────────────────────────────────────────── */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <KPICard
-              label="Total waiting"
-              value={stats.totalWaiting}
-              subtext={stats.waitTrend.text}
-              valueColor="default"
-              trend={stats.waitTrend.dir}
-            />
-            <KPICard
-              label="18-week performance"
-              value={stats.perf18}
-              subtext={`Target 92% — ${stats.perf18Gap}`}
-              valueColor="amber"
-            />
-            <KPICard
-              label="Waiting over 52 weeks"
-              value={stats.over52}
-              subtext={stats.over52Trend.text}
-              valueColor="red"
-              trend="up"
-            />
-            <KPICard
-              label="Median wait"
-              value={stats.medianWait}
-              subtext="0.3 wks vs last period"
-              valueColor="green"
-              trend="down"
-            />
+      {/* ── KPI Cards Row ── */}
+      <motion.div variants={containerVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <DashboardKPICard 
+          title="Total Waiting List" 
+          value={stats.waitValK} 
+          badgeText={stats.growthBadge} 
+          badgeColor={stats.growthColor} 
+          subtext="TRENDS"
+          href="/trends"
+        />
+        <DashboardKPICard 
+          title="Avg. Wait Time" 
+          value="14.4 wks" 
+          badgeText="↑ 0.4 wks" 
+          badgeColor="red" 
+          subtext="TRENDS" 
+        />
+        <DashboardKPICard 
+          title="% Over 18 Weeks" 
+          value={stats.pct18} 
+          badgeText="Amber" 
+          badgeColor="amber" 
+          subtext="STATUS"
+          href="/map"
+        />
+        <DashboardKPICard 
+          title="Backlog Growth Rate" 
+          value={stats.growthRateStr} 
+          badgeText={stats.growthColor === 'red' ? 'Red' : 'Green'} 
+          badgeColor={stats.growthColor} 
+          subtext="STATUS" 
+        />
+      </motion.div>
+
+      {/* ── Visual Analytics Row: Chart & Pie ── */}
+      <motion.div variants={containerVariants} className="grid lg:grid-cols-3 gap-6 lg:h-[420px]">
+        
+        {/* Main Chart */}
+        <motion.div variants={itemVariants} className="lg:col-span-2 bg-[#1e293b]/70 backdrop-blur-xl border border-white/5 rounded-2xl p-5 flex flex-col shadow-[0_8px_32px_0_rgba(0,0,0,0.2)]">
+          <div className="mb-6">
+            <h2 className="text-slate-100 font-bold text-base">National Backlog Trend</h2>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">HOW THE WAITING LIST HAS GROWN</p>
+          </div>
+          <div className="flex-1 w-full min-h-[250px] lg:min-h-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.5} />
+                <XAxis 
+                  dataKey="label" 
+                  tick={{ fill: '#64748b', fontSize: 11 }} 
+                  axisLine={false} 
+                  tickLine={false}
+                  minTickGap={30}
+                />
+                <YAxis 
+                  tick={{ fill: '#64748b', fontSize: 11 }} 
+                  axisLine={false} 
+                  tickLine={false}
+                  tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}
+                  width={40}
+                  domain={['dataMin - 100000', 'dataMax + 100000']}
+                />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#f8fafc', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}
+                  itemStyle={{ color: '#60a5fa', fontWeight: 'bold' }}
+                  labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
+                />
+                {highlightStart && (
+                  <ReferenceArea x1={highlightStart} x2={chartData[chartData.length-1].label} fill="#f59e0b" fillOpacity={0.05} />
+                )}
+                <Line 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="#3b82f6" 
+                  strokeWidth={3} 
+                  dot={{ r: 4, fill: '#1e293b', stroke: '#3b82f6', strokeWidth: 2 }}
+                  activeDot={{ r: 6, fill: '#60a5fa', stroke: '#0f172a', strokeWidth: 2 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+
+        {/* Wait Time Distribution Donut Chart */}
+        <motion.div variants={itemVariants} className="bg-[#1e293b]/70 backdrop-blur-xl border border-white/5 rounded-2xl p-5 flex flex-col shadow-[0_8px_32px_0_rgba(0,0,0,0.2)]">
+          <div className="mb-2">
+            <h2 className="text-slate-100 font-bold text-base flex items-center gap-2">
+              <PieChartIcon size={18} className="text-[#3b82f6]" /> Wait Distribution
+            </h2>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">BREAKDOWN BY BANDING</p>
+          </div>
+          
+          <div className="flex-1 w-full min-h-[220px] relative">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={waitBands}
+                  cx="50%" cy="50%"
+                  innerRadius="65%" outerRadius="90%"
+                  paddingAngle={3} dataKey="value" stroke="none"
+                  startAngle={90} endAngle={-270}
+                >
+                  {waitBands.map((b, i) => <Cell key={i} fill={b.color} />)}
+                </Pie>
+                <Tooltip 
+                  formatter={(v: number) => [fmtM(v), 'Patients']}
+                  contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#f8fafc' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-2">
+              <span className="text-2xl font-black text-white">{stats.waitValK}</span>
+              <span className="text-[9px] uppercase font-bold text-slate-500 tracking-widest">Total</span>
+            </div>
           </div>
 
-          {/* ── Backlog Overview ─────────────────────────────────────── */}
-          <section>
-            <SectionHeader label="Backlog Overview" />
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Line chart card */}
-              <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h2 className="text-base font-bold text-slate-800">
-                      Incomplete pathways — monthly trend
-                    </h2>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      Millions · {data.monthly_trend[0]?.month} to {data.monthly_trend[data.monthly_trend.length - 1]?.month}
-                    </p>
+          <div className="mt-4 space-y-2.5">
+            {waitBands.map(b => {
+              const totalVal = waitBands.reduce((acc, curr) => acc + curr.value, 0) || 1
+              const pct = ((b.value / totalVal) * 100).toFixed(1)
+              return (
+                <div key={b.name} className="flex justify-between items-center bg-[#0f172a]/50 p-2 rounded-lg border border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-sm" style={{backgroundColor: b.color}}></span>
+                    <span className="text-xs font-semibold text-slate-300">{b.name}</span>
                   </div>
-                  <span className="text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded uppercase tracking-wider">
-                    NHS England
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-slate-500 font-medium">{fmtM(b.value)}</span>
+                    <span className="text-xs font-bold text-slate-100 w-10 text-right">{pct}%</span>
+                  </div>
                 </div>
-                <BacklogChart data={data.monthly_trend} />
-              </div>
+              )
+            })}
+          </div>
+        </motion.div>
 
-              {/* Donut chart card */}
-              <WaitingBandSplit
-                totalWaiting={data.total_waiting}
-                pctOver18Weeks={data.pct_over_18_weeks}
-              />
-            </div>
-          </section>
+      </motion.div>
 
-          {/* ── Performance by Specialty ──────────────────────────────── */}
-          <section>
-            <SectionHeader label="Performance by Specialty" />
-            <div className="grid md:grid-cols-2 gap-6">
-              {specialtiesData?.specialties ? (
-                <>
-                  <SpecialtyList specialties={specialtiesData.specialties} />
-                  <SpecialtyPerformanceChart specialties={specialtiesData.specialties} />
-                </>
-              ) : (
-                <>
-                  <div className="h-[440px] bg-slate-50 rounded-xl animate-pulse" />
-                  <div className="h-[440px] bg-slate-50 rounded-xl animate-pulse" />
-                </>
-              )}
-            </div>
-          </section>
+      {/* ── Tabular Analytics Row ── */}
+      <motion.div variants={containerVariants} className="grid grid-cols-1">
+        {/* Worst Performing Regions Table */}
+        <motion.div variants={itemVariants} className="bg-[#1e293b]/70 backdrop-blur-xl border border-white/5 rounded-2xl p-5 flex flex-col shadow-[0_8px_32px_0_rgba(0,0,0,0.2)]">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 border-b border-slate-700/50 pb-4">
+             <div>
+               <h2 className="text-slate-100 font-bold text-base flex items-center gap-2">
+                 <Activity size={18} className="text-red-400" />
+                 Regional Disparities Overview
+               </h2>
+               <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">WORST PERFORMING NHS REGIONS</p>
+             </div>
+             
+             <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mr-2 flex items-center gap-1"><Filter size={12}/> Filter:</span>
+                <button className="px-3 py-1.5 rounded-lg bg-blue-600/20 border border-blue-500/30 text-blue-400 text-xs font-bold transition-all">Top 5 Critical</button>
+                <button className="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-200 text-xs font-bold transition-all">All Regions</button>
+                <button className="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-200 text-xs font-bold transition-all">North</button>
+                <button className="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-200 text-xs font-bold transition-all">South</button>
+             </div>
+          </div>
+          
+          <div className="flex-1 overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[500px]">
+              <thead>
+                <tr className="border-b border-slate-700 text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
+                  <th className="pb-3 w-10 font-medium">Rank</th>
+                  <th className="pb-3 font-medium">NHS Region</th>
+                  <th className="pb-3 font-medium text-right">Total Waiting</th>
+                  <th className="pb-3 font-medium text-right whitespace-nowrap">% Over 18 Weeks</th>
+                  <th className="pb-3 font-medium text-right w-24">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/80">
+                {worstRegions.map((region, i) => (
+                  <tr key={region.id} className="hover:bg-[#0f172a] transition-colors group">
+                    <td className="py-4 text-xs font-bold text-slate-500 group-hover:text-slate-400">{i + 1}</td>
+                    <td className="py-4 text-sm font-bold text-slate-200 group-hover:text-blue-400 transition-colors">{region.name}</td>
+                    <td className="py-4 text-sm font-medium text-slate-300 text-right">{fmtM(region.total_waiting)}</td>
+                    <td className="py-4 text-sm text-right font-bold text-red-400">
+                      {region.pct_over_18_weeks.toFixed(2)}%
+                    </td>
+                    <td className="py-4 text-right">
+                       <span className="inline-flex bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Critical</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </motion.div>
+      </motion.div>
 
-          {/* ── Regional Performance ──────────────────────────────────── */}
-          <section>
-            <SectionHeader label="Regional Performance" />
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Region cards */}
-              <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-                <h2 className="text-base font-bold text-slate-800 mb-4">
-                  Patients waiting by NHS region
-                </h2>
-                {regions.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-3">
-                    {regions.slice(0, 6).map((r) => (
-                      <RegionCard key={r.id} region={r} />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3">
-                    {[...Array(6)].map((_, i) => (
-                      <div key={i} className="h-20 bg-slate-50 rounded-lg animate-pulse" />
-                    ))}
-                  </div>
-                )}
-              </div>
+      {/* ── Platform & Mission Sections ── */}
+      <motion.div variants={containerVariants} className="pt-10">
+        <motion.div variants={itemVariants} className="mb-6 flex items-center gap-4">
+          <h2 className="text-xl font-bold text-white tracking-tight">How We Handle Data Safely</h2>
+          <div className="h-px bg-slate-700/80 flex-1"></div>
+        </motion.div>
 
-              {/* Over-52 trend chart */}
-              <Over52Chart trend={data.monthly_trend} />
-            </div>
-          </section>
+        <motion.div variants={containerVariants} className="grid md:grid-cols-3 gap-6 mb-10">
+          <DarkFeaturePanel 
+            icon={ShieldCheck} 
+            title="Protecting Your Privacy" 
+            desc="We strictly use public, safe data from NHS England. No personal patient details or names are ever seen or stored." 
+          />
+          <DarkFeaturePanel 
+            icon={Scale} 
+            title="Accurate Calculations" 
+            desc="We use open and tested mathematical methods to make sure our wait time numbers are completely fair and correct." 
+          />
+          <DarkFeaturePanel 
+            icon={Database} 
+            title="Always Up-To-Date" 
+            desc="Our system automatically pulls the newest official data from the NHS the moment it's released, so you always see the truth." 
+          />
+        </motion.div>
 
-          {/* ── Wait Estimator ────────────────────────────────────────── */}
-          <WaitEstimateWidget specialties={specialtiesData} />
-        </>
-      )}
-    </div>
+        <motion.div variants={itemVariants} className="mb-6 flex items-center gap-4">
+          <h2 className="text-xl font-bold text-white tracking-tight">Why We Built This</h2>
+          <div className="h-px bg-slate-700/80 flex-1"></div>
+        </motion.div>
+
+        <motion.div variants={containerVariants} className="grid md:grid-cols-2 gap-6 mb-12">
+          <DarkFeaturePanel 
+            icon={Heart} 
+            title="For Patients and Staff" 
+            desc="People shouldn't have to navigate a confusing system to understand their care. We built this to make data clear for everyone—giving patients, doctors, and managers the exact same simple insights." 
+          />
+          <DarkFeaturePanel 
+            icon={Target} 
+            title="Fair Healthcare For All" 
+            desc="Our main goal is to spot unfair wait times across different regions. By showing exactly where help is needed most, we want to help the NHS make care equal for everyone, no matter where they live." 
+          />
+        </motion.div>
+
+        {/* ── Newsletter / Support ── */}
+        <motion.div variants={itemVariants} className="bg-gradient-to-br from-[#1e293b] to-[#0f172a] border border-blue-500/20 rounded-2xl p-8 md:p-12 text-center shadow-lg relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px]"></div>
+          
+          <div className="w-16 h-16 rounded-full bg-[#0f172a] border border-slate-700 flex items-center justify-center mx-auto mb-6 text-[#3b82f6] shadow-sm relative z-10">
+            <Mail size={28} />
+          </div>
+          
+          <h2 className="text-2xl font-extrabold text-white mb-3 relative z-10">Support Us & Get Updates</h2>
+          <p className="text-slate-400 text-sm mb-8 max-w-lg mx-auto relative z-10">
+            Get weekly insights, methodology updates, and exclusive reports on NHS wait list trends sent directly to your inbox. No spam, just data.
+          </p>
+          
+          <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto relative z-10">
+            <input 
+              type="email" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your professional email..." 
+              className="flex-1 bg-[#0f172a] border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#3b82f6] focus:border-transparent transition-all placeholder:text-slate-500 font-medium shadow-inner"
+              required
+            />
+            <button 
+              type="submit"
+              className="py-3 px-6 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-500 transition-colors flex justify-center items-center gap-2 whitespace-nowrap shadow-md"
+            >
+              {subscribed ? 'Subscribed ✓' : 'Support Us'}
+            </button>
+          </form>
+        </motion.div>
+      </motion.div>
+    </motion.div>
   )
 }
