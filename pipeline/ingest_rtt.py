@@ -87,6 +87,35 @@ ICS_KEYWORDS: list[tuple[str, str]] = [
 ]
 
 
+# Trust code prefix → region (first 3 chars of provider code, e.g. "RFH" → London)
+TRUST_PREFIX_MAP: dict[str, str] = {
+    "RAJ": "South West", "RK9": "South West", "RBD": "South West",
+    "RDZ": "South West", "REF": "South West", "RH8": "South West",
+    "RA3": "South West", "RA4": "South West", "RVJ": "South West",
+    "RFH": "London", "RQM": "London", "RYJ": "London", "RKE": "London",
+    "RAN": "London", "RAL": "London", "RRV": "London", "RJ1": "London",
+    "RJ6": "London", "RJZ": "London", "RPY": "London", "RQX": "London",
+    "RTG": "Midlands", "RJE": "Midlands", "RBK": "Midlands",
+    "RLT": "Midlands", "RNA": "Midlands", "RR1": "Midlands",
+    "RXW": "Midlands", "RKB": "Midlands", "RXH": "South East",
+    "RYR": "South East", "RXC": "South East", "RTK": "South East",
+    "RPC": "South East", "RHM": "South East", "R1F": "South East",
+    "RDE": "East of England", "RGQ": "East of England",
+    "RGR": "East of England", "RM1": "East of England",
+    "RAJ": "East of England", "RGT": "East of England",
+    "RCB": "North West", "RBQ": "North West", "RXN": "North West",
+    "RMC": "North West", "RRF": "North West", "RBT": "North West",
+    "RTX": "North East & Yorkshire", "RR8": "North East & Yorkshire",
+    "RWD": "North East & Yorkshire", "RXF": "North East & Yorkshire",
+    "RJL": "North East & Yorkshire", "RAE": "North East & Yorkshire",
+}
+
+
+def map_trust_to_region(provider_code: str) -> str:
+    prefix = str(provider_code)[:3].upper()
+    return TRUST_PREFIX_MAP.get(prefix, "Unknown")
+
+
 def map_ics_to_region(ics_name: str) -> str:
     upper = ics_name.upper()
     for keyword, region in ICS_KEYWORDS:
