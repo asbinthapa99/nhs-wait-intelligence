@@ -39,7 +39,7 @@ Style rules:
 
 def _gemini(prompt: str, max_tokens: int) -> str:
     resp = httpx.post(
-        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={settings.gemini_api_key}",
+        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={settings.gemini_api_key}",
         json={
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
@@ -56,7 +56,7 @@ def _groq(prompt: str, max_tokens: int) -> str:
         "https://api.groq.com/openai/v1/chat/completions",
         headers={"Authorization": f"Bearer {settings.groq_api_key}"},
         json={
-            "model": "llama3-8b-8192",
+            "model": "llama-3.1-8b-instant",
             "messages": [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
@@ -97,7 +97,7 @@ def _openrouter(prompt: str, max_tokens: int) -> str:
         "https://openrouter.ai/api/v1/chat/completions",
         headers={"Authorization": f"Bearer {settings.openrouter_api_key}"},
         json={
-            "model": "mistralai/mistral-7b-instruct:free",
+            "model": "mistralai/mistral-small-3.1-24b-instruct:free",
             "messages": [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
@@ -226,7 +226,7 @@ def stream_ai_response(
                 "https://api.groq.com/openai/v1/chat/completions",
                 headers={"Authorization": f"Bearer {settings.groq_api_key}"},
                 json={
-                    "model": "llama3-8b-8192",
+                    "model": "llama-3.1-8b-instant",
                     "messages": [
                         {"role": "system", "content": SYSTEM_PROMPT},
                         {"role": "user", "content": prompt},
@@ -256,7 +256,7 @@ def stream_ai_response(
         try:
             with httpx.stream(
                 "POST",
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?key={settings.gemini_api_key}&alt=sse",
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?key={settings.gemini_api_key}&alt=sse",
                 json={
                     "contents": [{"role": "user", "parts": [{"text": prompt}]}],
                     "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
