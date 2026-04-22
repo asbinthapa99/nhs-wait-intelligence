@@ -39,7 +39,7 @@ Style rules:
 
 def _gemini(prompt: str, max_tokens: int) -> str:
     resp = httpx.post(
-        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={settings.gemini_api_key}",
+        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={settings.gemini_api_key}",
         json={
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
@@ -48,7 +48,9 @@ def _gemini(prompt: str, max_tokens: int) -> str:
         timeout=30,
     )
     resp.raise_for_status()
-    return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+    candidate = resp.json()["candidates"][0]
+    parts = candidate.get("content", {}).get("parts", [])
+    return parts[0]["text"] if parts else ""
 
 
 def _groq(prompt: str, max_tokens: int) -> str:
@@ -95,9 +97,13 @@ def _freellm(prompt: str, max_tokens: int) -> str:
 def _openrouter(prompt: str, max_tokens: int) -> str:
     resp = httpx.post(
         "https://openrouter.ai/api/v1/chat/completions",
-        headers={"Authorization": f"Bearer {settings.openrouter_api_key}"},
+        headers={
+            "Authorization": f"Bearer {settings.openrouter_api_key}",
+            "HTTP-Referer": "https://nhs-wait-intelligence.vercel.app",
+            "X-Title": "NHS Wait Intelligence",
+        },
         json={
-            "model": "mistralai/mistral-small-3.1-24b-instruct:free",
+            "model": "google/gemma-4-31b-it:free",
             "messages": [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
@@ -256,7 +262,7 @@ def stream_ai_response(
         try:
             with httpx.stream(
                 "POST",
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?key={settings.gemini_api_key}&alt=sse",
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key={settings.gemini_api_key}&alt=sse",
                 json={
                     "contents": [{"role": "user", "parts": [{"text": prompt}]}],
                     "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
