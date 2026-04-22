@@ -241,33 +241,6 @@ The platform supports multiple practical use cases:
 
 ---
 
-## UK Global Talent (Digital Technology) Portfolio Framing
-
-For portfolio use, this repository can be mapped to evidence categories commonly used in UK Global Talent applications.
-
-| Evidence area | What this repository demonstrates | What to add in your portfolio |
-|---|---|---|
-| Product-led innovation | End-to-end digital platform solving a national healthcare operations problem | Short product narrative + screenshots of key dashboards |
-| Technical leadership | Architecture decisions across frontend, backend, data pipeline, and deployment | Architecture note linking design decisions to outcomes |
-| Impact and contribution | Public-interest tooling using official NHS data | Usage evidence (users, demos, partner feedback, references) |
-| Recognition and credibility | Open-source delivery with transparent methods and reproducible data sources | Links to talks, write-ups, endorsements, or external mentions |
-| Ongoing excellence | Clear roadmap and extensible analytics modules | Changelog of improvements and measurable milestones |
-
-Note: visa eligibility decisions are made by official assessors; this section is a technical documentation aid, not legal advice.
-
----
-
-## Suggested Additions to Strengthen This README Further
-
-To improve evidence quality without removing current content, consider adding:
-
-1. A short "Results" section with verified adoption or engagement metrics
-2. Case examples showing how insights informed a real planning decision
-3. Links to presentations, demos, or public technical write-ups
-4. A timeline of major releases and their measurable improvements
-5. Named contributor roles to highlight leadership and ownership
-
----
 
 ## Contributing
 
