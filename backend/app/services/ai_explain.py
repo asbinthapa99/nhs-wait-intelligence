@@ -72,6 +72,25 @@ def _groq(prompt: str, max_tokens: int) -> str:
     return resp.json()["choices"][0]["message"]["content"]
 
 
+def _cerebras(prompt: str, max_tokens: int) -> str:
+    resp = httpx.post(
+        "https://api.cerebras.ai/v1/chat/completions",
+        headers={"Authorization": f"Bearer {settings.cerebras_api_key}"},
+        json={
+            "model": "llama3.1-8b",
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+            "max_tokens": max_tokens,
+            "temperature": 0.4,
+        },
+        timeout=30,
+    )
+    resp.raise_for_status()
+    return resp.json()["choices"][0]["message"]["content"]
+
+
 def _freellm(prompt: str, max_tokens: int) -> str:
     resp = httpx.post(
         "https://apifreellm.com/api/v1/chat",
@@ -141,6 +160,8 @@ def _generate(prompt: str, max_tokens: int = 600) -> str:
     providers = []
     if settings.gemini_api_key:
         providers.append(("Gemini", _gemini))
+    if settings.cerebras_api_key:
+        providers.append(("Cerebras", _cerebras))
     if settings.groq_api_key:
         providers.append(("Groq", _groq))
     if settings.openrouter_api_key:
