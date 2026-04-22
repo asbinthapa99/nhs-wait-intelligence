@@ -9,9 +9,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@gluestack-style/react": "^1.0.57",
-    "@gluestack-ui/config": "^1.1.20",
-    "@gluestack-ui/themed": "^1.1.73",
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-tabs": "^1.1.13",
