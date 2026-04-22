@@ -96,15 +96,6 @@ async def ai_explain(
 
     context, data_ctx = _build_context(db, payload.region)
 
-    if not settings.anthropic_api_key:
-        return AIResponse(
-            region=payload.region,
-            question=payload.question,
-            response=_fallback_ai_response(payload.question, payload.region, context),
-            data_context=data_ctx,
-            cached=False,
-        )
-
     history = [{"role": m.role, "content": m.content} for m in payload.history]
     try:
         response_text, cached = get_ai_response(db, payload.question, payload.region, context, history)
@@ -136,14 +127,6 @@ async def ai_stream(
         raise HTTPException(status_code=422, detail="Question must be under 500 characters")
 
     context, _ = _build_context(db, payload.region)
-
-    if not settings.anthropic_api_key:
-        async def _fallback():
-            yield "data: " + json.dumps(
-                {"text": _fallback_ai_response(payload.question, payload.region, context), "done": False}
-            ) + "\n\n"
-            yield "data: " + json.dumps({"done": True}) + "\n\n"
-        return StreamingResponse(_fallback(), media_type="text/event-stream")
 
     history = [{"role": m.role, "content": m.content} for m in payload.history]
 

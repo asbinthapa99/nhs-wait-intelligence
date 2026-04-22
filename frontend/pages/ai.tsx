@@ -283,7 +283,7 @@ export default function AIInsightsPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-[#111] tracking-tight">AI Insights</h1>
-            <p className="text-xs text-[#999] mt-0.5">Ask anything about NHS waiting list data — powered by Claude</p>
+            <p className="text-xs text-[#999] mt-0.5">Ask anything about NHS waiting list data</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -493,7 +493,7 @@ export default function AIInsightsPage() {
             <p className="text-[11px] text-[#888] leading-relaxed">
               {deepMode
                 ? 'Deep Analysis uses a SQL agent to query the live NHS database directly. Slower but highly accurate.'
-                : 'Standard mode uses Claude with NHS context. Responses may stream token-by-token or return cached answers.'}
+                : 'Standard mode uses NHS context data. Responses may stream token-by-token or return cached answers.'}
             </p>
             <div className="flex flex-wrap gap-2 mt-3">
               {['NHS England datasets', 'ONS Deprivation', 'RTT Pipeline'].map(s => (
