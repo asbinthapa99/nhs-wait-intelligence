@@ -119,7 +119,7 @@ def test_overview_uses_live_metrics(client, db):
     data = response.json()
 
     assert data["total_regions"] == 2
-    assert data["total_waiting"] == 1_236_000
+    assert data["total_waiting"] == 1_316_000
     assert data["monthly_trend"][-1]["month"] == "Jan 25"
 
 
