@@ -45,7 +45,7 @@ export default function SpecialtyList({ specialties }: SpecialtyListProps) {
   return (
     <div className="flex flex-col h-full w-full">
       {/* Column headers */}
-      <div className="grid grid-cols-[1fr,auto,auto] gap-4 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-200 pb-3 mb-2">
+      <div className="grid grid-cols-[1fr,auto,auto] gap-4 text-[10px] font-black uppercase tracking-widest text-[#666] border-b border-[#e5e5e5] pb-3 mb-2">
         <span>Specialty Area</span>
         <span className="text-right w-16">Volume</span>
         <span className="text-right w-20">18-week Breaches</span>
@@ -62,18 +62,18 @@ export default function SpecialtyList({ specialties }: SpecialtyListProps) {
           const category = CATEGORY_MAP[s.name] ?? ''
 
           return (
-            <div key={s.name} className="grid grid-cols-[1fr,auto,auto] gap-4 items-center py-3.5 group hover:bg-slate-50/50 transition-colors rounded-xl -mx-2 px-2">
+            <div key={s.name} className="grid grid-cols-[1fr,auto,auto] gap-4 items-center py-3.5 group hover:bg-[#f9fafb]/50 transition-colors rounded-xl -mx-2 px-2">
               <div>
-                <p className="text-sm font-extrabold text-slate-800 leading-tight group-hover:text-[#005eb8] transition-colors">{s.name}</p>
-                {category && <p className="text-[11px] font-bold text-slate-400 mt-0.5">{category}</p>}
-                <div className="mt-2 h-1.5 w-full max-w-[140px] bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                <p className="text-sm font-extrabold text-[#222] leading-tight group-hover:text-emerald-600 transition-colors">{s.name}</p>
+                {category && <p className="text-[11px] font-bold text-[#666] mt-0.5">{category}</p>}
+                <div className="mt-2 h-1.5 w-full max-w-[140px] bg-[#f3f4f6] rounded-full overflow-hidden shadow-inner">
                   <div
                     className="h-full rounded-full transition-all duration-1000 ease-out"
                     style={{ width: `${barPct}%`, backgroundColor: color }}
                   />
                 </div>
               </div>
-              <span className="text-sm font-black text-slate-700 text-right w-16">{volumeK}</span>
+              <span className="text-sm font-black text-[#444] text-right w-16">{volumeK}</span>
               <span
                 className="text-xs font-black text-right w-20 px-2 py-1 rounded-md shadow-sm"
                 style={badgeStyle(s.pct_over_18_weeks)}

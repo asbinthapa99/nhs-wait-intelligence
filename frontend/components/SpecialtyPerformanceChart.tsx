@@ -61,8 +61,8 @@ export default function SpecialtyPerformanceChart({ specialties }: SpecialtyPerf
             />
             <Tooltip
               formatter={(value: number) => [`${value}%`, '18-week performance']}
-              contentStyle={{ background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: 13, color: '#f8fafc', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}
-              itemStyle={{ color: '#f8fafc', fontWeight: 'bold' }}
+              contentStyle={{ background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(8px)', border: '1px solid #e5e5e5', borderRadius: '12px', fontSize: 13, color: '#111', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}
+              itemStyle={{ color: '#111', fontWeight: 'bold' }}
               labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
               cursor={{ fill: 'rgba(255,255,255,0.05)' }}
             />
@@ -82,7 +82,7 @@ export default function SpecialtyPerformanceChart({ specialties }: SpecialtyPerf
       </div>
 
       {/* Custom Legend */}
-      <div className="mt-4 flex items-center justify-center gap-6 border-t border-slate-200 pt-4">
+      <div className="mt-4 flex items-center justify-center gap-6 border-t border-[#e5e5e5] pt-4">
         <div className="flex items-center gap-2">
            <div className="w-3 h-1 bg-[#10b981] border border-[#10b981] border-dashed" />
            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">92% NHS Target</span>

@@ -33,7 +33,7 @@ export default function RegionMap({ regions = [], selectedRegionId = null, onSel
       maxZoom={10}
       maxBounds={[[49.5, -8.7], [56.5, 2.3]]}
       maxBoundsViscosity={0.9}
-      style={{ height: '100%', width: '100%', borderRadius: '12px', background: '#0f172a' }}
+      style={{ height: '100%', width: '100%', borderRadius: '12px', background: '#f5f5f5' }}
       scrollWheelZoom
       touchZoom
       doubleClickZoom
@@ -43,7 +43,7 @@ export default function RegionMap({ regions = [], selectedRegionId = null, onSel
     >
       <TileLayer
         attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
       />
       {regions.map((r) => {
         const coords: [number, number] | undefined =
@@ -63,10 +63,10 @@ export default function RegionMap({ regions = [], selectedRegionId = null, onSel
             center={coords}
             radius={radius}
             pathOptions={{
-              color: isSelected ? '#ffffff' : color,
+              color: isSelected ? '#111111' : color,
               fillColor: color,
               fillOpacity: isSelected ? 0.95 : 0.75,
-              weight: isSelected ? 3 : 1.5,
+              weight: isSelected ? 2 : 1.5,
             }}
             eventHandlers={{ click: () => onSelectRegion?.(r) }}
           >
@@ -74,12 +74,12 @@ export default function RegionMap({ regions = [], selectedRegionId = null, onSel
               permanent={false}
               direction="top"
               offset={[0, -radius - 4]}
-              className="leaflet-tooltip-dark"
+              className="leaflet-tooltip-light"
             >
-              <div style={{ fontSize: 12, lineHeight: 1.4 }}>
+              <div style={{ fontSize: 11, lineHeight: 1.4, padding: '4px 6px', color: '#111' }}>
                 <div style={{ fontWeight: 700, marginBottom: 2 }}>{r.name}</div>
                 <div>Score: <strong style={{ color }}>{r.inequality_score}</strong></div>
-                <div>{r.pct_over_18_weeks}% over 18w</div>
+                <div style={{ color: '#666' }}>{r.pct_over_18_weeks}% over 18w</div>
               </div>
             </Tooltip>
           </CircleMarker>

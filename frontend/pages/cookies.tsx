@@ -37,26 +37,26 @@ export default function CookiesPage() {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-white">Cookie Policy</h1>
-          <p className="text-sm text-slate-400 mt-0.5">How NHS Wait Intelligence uses (and avoids) cookies.</p>
+          <p className="text-sm text-[#666] mt-0.5">How NHS Wait Intelligence uses (and avoids) cookies.</p>
         </div>
       </motion.div>
 
       <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl px-5 py-4">
         <p className="text-sm text-amber-300 font-medium">No tracking cookies — ever.</p>
-        <p className="text-xs text-slate-400 mt-1">We do not use advertising or analytics cookies. Session preferences are stored locally in your browser only.</p>
+        <p className="text-xs text-[#666] mt-1">We do not use advertising or analytics cookies. Session preferences are stored locally in your browser only.</p>
       </div>
 
       <div className="space-y-6">
         {SECTIONS.map((s, i) => (
           <motion.div key={s.title} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
             <h2 className="text-sm font-semibold text-white mb-2">{s.title}</h2>
-            <p className="text-sm text-slate-400 leading-relaxed">{s.body}</p>
+            <p className="text-sm text-[#666] leading-relaxed">{s.body}</p>
           </motion.div>
         ))}
       </div>
 
-      <div className="border-t border-slate-800 pt-6 text-xs text-slate-600">
-        Questions? Contact us at <a href="mailto:phyhopeme@gmail.com" className="text-blue-400 hover:underline">phyhopeme@gmail.com</a>
+      <div className="border-t border-[#e5e5e5] pt-6 text-xs text-[#666]">
+        Questions? Contact us at <a href="mailto:phyhopeme@gmail.com" className="text-emerald-600 hover:underline">phyhopeme@gmail.com</a>
       </div>
     </div>
   )

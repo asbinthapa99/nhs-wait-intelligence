@@ -11,7 +11,7 @@ const roles = [
     emoji: '🏥',
     description: 'Understand NHS waits in your area, compare providers, and prepare for conversations with your GP.',
     href: '/patient',
-    color: 'border-blue-200 hover:border-nhs-blue hover:bg-blue-50',
+    color: 'border-emerald-200 hover:border-nhs-blue hover:bg-emerald-50',
     badge: 'bg-blue-100 text-nhs-blue',
   },
   {
@@ -20,8 +20,8 @@ const roles = [
     emoji: '📊',
     description: 'Benchmark regions, identify outliers, explore specialty trends, and run scenario simulations.',
     href: '/map',
-    color: 'border-slate-200 hover:border-slate-400 hover:bg-slate-50',
-    badge: 'bg-slate-100 text-slate-700',
+    color: 'border-[#e5e5e5] hover:border-slate-400 hover:bg-[#f9fafb]',
+    badge: 'bg-[#f3f4f6] text-[#444]',
   },
   {
     id: 'executive',
@@ -29,8 +29,8 @@ const roles = [
     emoji: '🏛️',
     description: 'Get a concise view of backlog scale, inequality, and emerging operational risk across England.',
     href: '/ics',
-    color: 'border-slate-200 hover:border-slate-400 hover:bg-slate-50',
-    badge: 'bg-slate-100 text-slate-700',
+    color: 'border-[#e5e5e5] hover:border-slate-400 hover:bg-[#f9fafb]',
+    badge: 'bg-[#f3f4f6] text-[#444]',
   },
 ]
 
@@ -67,7 +67,7 @@ export default function OnboardingModal() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-white/50 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="onboarding-title"
@@ -77,17 +77,17 @@ export default function OnboardingModal() {
         <button
           onClick={dismiss}
           aria-label="Skip and continue to overview"
-          className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
+          className="absolute top-4 right-4 p-1.5 text-[#666] hover:text-[#444] rounded-lg hover:bg-[#f3f4f6] transition-colors"
         >
           <X size={18} />
         </button>
 
         <div className="mb-6 text-center">
           <p className="text-xs font-semibold uppercase tracking-widest text-nhs-blue mb-2">Welcome</p>
-          <h2 id="onboarding-title" className="text-2xl font-bold text-slate-900">
+          <h2 id="onboarding-title" className="text-2xl font-bold text-[#111]">
             Who are you today?
           </h2>
-          <p className="mt-2 text-sm text-slate-500">
+          <p className="mt-2 text-sm text-[#888]">
             Choose your role to jump straight to the most relevant view. You can always switch later.
           </p>
         </div>
@@ -103,12 +103,12 @@ export default function OnboardingModal() {
                 <span className="text-2xl">{role.emoji}</span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-semibold text-slate-900 text-sm">{role.label}</span>
+                    <span className="font-semibold text-[#111] text-sm">{role.label}</span>
                     <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${role.badge}`}>
                       {role.id === 'patient' ? 'Most popular' : role.id === 'analyst' ? 'Data-rich' : 'Executive'}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500 leading-relaxed">{role.description}</p>
+                  <p className="text-xs text-[#888] leading-relaxed">{role.description}</p>
                 </div>
               </div>
             </button>
@@ -117,7 +117,7 @@ export default function OnboardingModal() {
 
         <button
           onClick={dismiss}
-          className="mt-4 w-full text-center text-xs text-slate-400 hover:text-slate-600 transition-colors py-2"
+          className="mt-4 w-full text-center text-xs text-[#666] hover:text-[#666] transition-colors py-2"
         >
           Skip — take me to the overview
         </button>

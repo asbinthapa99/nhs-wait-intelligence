@@ -13,7 +13,7 @@ const fmtV = (val: number) => {
 }
 
 const BANDS = [
-  { name: 'Under 18 weeks', color: '#005eb8', bgColor: 'bg-blue-50', textColor: 'text-[#005eb8]', borderColor: 'border-blue-200' },
+  { name: 'Under 18 weeks', color: '#005eb8', bgColor: 'bg-emerald-50', textColor: 'text-emerald-600', borderColor: 'border-emerald-200' },
   { name: '18 to 52 weeks', color: '#f59e0b', bgColor: 'bg-amber-50', textColor: 'text-amber-600', borderColor: 'border-amber-200' },
   { name: 'Over 52 weeks',  color: '#ef4444', bgColor: 'bg-red-50',   textColor: 'text-red-600',   borderColor: 'border-red-200' },
 ]
@@ -53,16 +53,16 @@ export default function WaitingBandSplit({ totalWaiting, pctOver18Weeks }: Waiti
             </Pie>
             <Tooltip
               formatter={(v: number) => [fmtV(v), 'Patients']}
-              contentStyle={{ background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: 13, color: '#f8fafc', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}
-              itemStyle={{ color: '#f8fafc', fontWeight: 'bold' }}
+              contentStyle={{ background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(8px)', border: '1px solid #e5e5e5', borderRadius: '12px', fontSize: 13, color: '#111', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}
+              itemStyle={{ color: '#111', fontWeight: 'bold' }}
               labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
             />
           </PieChart>
         </ResponsiveContainer>
         {/* Center label */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="text-3xl font-black text-slate-900">{fmtV(totalWaiting)}</span>
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Total Wait</span>
+          <span className="text-3xl font-black text-[#111]">{fmtV(totalWaiting)}</span>
+          <span className="text-[10px] font-bold text-[#666] uppercase tracking-widest mt-1">Total Wait</span>
         </div>
       </div>
 
@@ -76,7 +76,7 @@ export default function WaitingBandSplit({ totalWaiting, pctOver18Weeks }: Waiti
                 <span className={`text-xs font-extrabold uppercase tracking-wide ${b.textColor}`}>{b.name}</span>
               </div>
               <div className="flex items-center gap-4">
-                <span className="text-sm font-black text-slate-800 tabular-nums">{fmtV(b.value)}</span>
+                <span className="text-sm font-black text-[#222] tabular-nums">{fmtV(b.value)}</span>
                 <span className={`text-[11px] font-black tabular-nums bg-white px-2 py-1 rounded-md ${b.textColor}`}>{pct}%</span>
               </div>
             </div>

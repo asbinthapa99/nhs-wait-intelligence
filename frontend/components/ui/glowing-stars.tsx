@@ -23,7 +23,7 @@ export function GlowingStarsBackgroundCard({
   }, [])
 
   return (
-    <div className={cn("bg-slate-900 border border-slate-800 rounded-2xl p-6 overflow-hidden relative", className)}>
+    <div className={cn("bg-white border border-[#e5e5e5] rounded-2xl p-6 overflow-hidden relative", className)}>
       <div
         className="absolute inset-0 grid"
         style={{ gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: 0 }}
@@ -38,7 +38,7 @@ export function GlowingStarsBackgroundCard({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0 }}
                   transition={{ duration: 1.5 }}
-                  className="absolute w-2 h-2 rounded-full bg-blue-500 blur-md"
+                  className="absolute w-2 h-2 rounded-full bg-emerald-500 blur-md"
                 />
               )}
             </AnimatePresence>

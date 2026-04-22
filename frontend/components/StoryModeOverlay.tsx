@@ -58,7 +58,7 @@ export default function StoryModeOverlay() {
         dragMomentum={false}
         whileDrag={{ scale: 1.1, cursor: "grabbing" }}
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 w-12 h-12 bg-slate-800 hover:bg-slate-700 text-white rounded-full flex items-center justify-center shadow-lg border border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 z-50 transition-colors group cursor-grab"
+        className="fixed bottom-6 right-6 w-12 h-12 bg-[#f5f5f5] hover:bg-slate-700 text-white rounded-full flex items-center justify-center shadow-lg border border-[#d4d4d4] focus:outline-none focus:ring-2 focus:ring-blue-500 z-50 transition-colors group cursor-grab"
         title="Take the Platform Tour (Drag to move)"
       >
         <span className="text-xl pointer-events-none group-hover:scale-110 transition-transform">🎬</span>
@@ -71,13 +71,13 @@ export default function StoryModeOverlay() {
   return (
     <>
       {/* Backdrop overlay */}
-      <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 pointer-events-auto transition-opacity" />
+      <div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-50 pointer-events-auto transition-opacity" />
       
       {/* Tour Modal */}
-      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-slate-900 border border-slate-700 rounded-xl p-8 z-50 w-full max-w-md shadow-2xl">
+      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white border border-[#e5e5e5] rounded-xl p-8 z-50 w-full max-w-md shadow-2xl">
         <button 
           onClick={() => setIsOpen(false)}
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-200 text-2xl font-bold cursor-pointer transition-colors"
+          className="absolute top-4 right-4 text-[#666] hover:text-[#1a1a1a] text-2xl font-bold cursor-pointer transition-colors"
           aria-label="Close"
         >
           &times;
@@ -87,24 +87,24 @@ export default function StoryModeOverlay() {
           {STEPS.map((_, i) => (
             <div 
               key={i} 
-              className={`h-1.5 flex-1 rounded-full ${i <= currentStep ? 'bg-blue-500' : 'bg-slate-800'}`}
+              className={`h-1.5 flex-1 rounded-full ${i <= currentStep ? 'bg-emerald-500' : 'bg-[#f5f5f5]'}`}
             />
           ))}
         </div>
         
         <h2 className="text-xl font-bold text-white mb-3">{step.title}</h2>
-        <p className="text-slate-300 text-sm leading-relaxed mb-8 min-h-[80px]">{step.content}</p>
+        <p className="text-[#333] text-sm leading-relaxed mb-8 min-h-[80px]">{step.content}</p>
         
-        <div className="flex justify-between items-center pt-5 border-t border-slate-800">
+        <div className="flex justify-between items-center pt-5 border-t border-[#e5e5e5]">
           <button 
             onClick={() => setIsOpen(false)}
-            className="text-sm font-semibold text-slate-400 hover:text-white cursor-pointer transition-colors"
+            className="text-sm font-semibold text-[#666] hover:text-white cursor-pointer transition-colors"
           >
             Skip tour
           </button>
           <button 
             onClick={handleNext}
-            className="bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 px-5 rounded-lg transition-colors cursor-pointer"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 px-5 rounded-lg transition-colors cursor-pointer"
           >
             {step.action}
           </button>

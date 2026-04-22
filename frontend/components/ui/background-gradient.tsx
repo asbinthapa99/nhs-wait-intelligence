@@ -29,7 +29,7 @@ export function BackgroundGradient({
           "bg-[radial-gradient(circle_farthest-side_at_0_100%,#00ccb1,transparent),radial-gradient(circle_farthest-side_at_100%_0,#7b61ff,transparent),radial-gradient(circle_farthest-side_at_100%_100%,#ffc414,transparent),radial-gradient(circle_farthest-side_at_0_0,#1ca0fb,#141316)]"
         )}
       />
-      <div className={cn("relative rounded-3xl bg-slate-900 border border-slate-800", className)}>
+      <div className={cn("relative rounded-3xl bg-white border border-[#e5e5e5]", className)}>
         {children}
       </div>
     </div>

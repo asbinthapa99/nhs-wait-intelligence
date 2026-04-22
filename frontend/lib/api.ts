@@ -453,6 +453,38 @@ export async function runScenarios(region: string): Promise<ScenarioComparison[]
   return data
 }
 
+export async function subscribeAlerts(email: string, region: string, threshold: number): Promise<{ ok: boolean }> {
+  const { data } = await client.post('/api/alerts/subscribe', { email, region, threshold })
+  return data
+}
+
+export interface TrustLoadData {
+  name: string
+  wait: number
+  load: string
+}
+
+export interface MutualAidPairing {
+  id: string
+  specialty: string
+  source: TrustLoadData
+  dest: TrustLoadData
+  patientsToMove: number
+  weeksSavedPerPatient: number
+  distanceMiles: number
+  costSavedEst: number
+  impact: string
+}
+
+export interface MutualAidData {
+  pairings: MutualAidPairing[]
+}
+
+export async function getMutualAid(specialty: string = 'All'): Promise<MutualAidData> {
+  const { data } = await client.get('/api/mutual-aid', { params: { specialty } })
+  return data
+}
+
 export function getApiUrl(path: string): string {
   return `${BASE_URL}${path}`
 }

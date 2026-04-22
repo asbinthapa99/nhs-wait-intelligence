@@ -4,6 +4,7 @@ import type { AppProps } from 'next/app'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useRouter } from 'next/router'
 import Layout from '../components/Layout'
+import SEO from '../components/SEO'
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter()
@@ -25,6 +26,7 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <div data-theme="nhsdark">
+      <SEO />
       {isLandingPage ? content : <Layout>{content}</Layout>}
     </div>
   )

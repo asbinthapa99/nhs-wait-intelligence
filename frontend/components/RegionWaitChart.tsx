@@ -41,8 +41,8 @@ export default function RegionWaitChart({ regions }: RegionWaitChartProps) {
           domain={[0, 'auto']}
         />
         <Tooltip
-          contentStyle={{ background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: 13, color: '#f8fafc', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}
-          itemStyle={{ color: '#f8fafc', fontWeight: 'bold' }}
+          contentStyle={{ background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(8px)', border: '1px solid #e5e5e5', borderRadius: '12px', fontSize: 13, color: '#111', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}
+          itemStyle={{ color: '#111', fontWeight: 'bold' }}
           labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
           formatter={(v: number) => [`${v}M`, 'People Waiting']}
           labelFormatter={(label: string) => label.replace('\n', '')}

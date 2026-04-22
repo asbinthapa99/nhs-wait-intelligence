@@ -12,12 +12,12 @@ const stagger = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { stag
 
 const TREND_ICON = {
   improving: <TrendingUp size={14} className="text-emerald-400" />,
-  stable: <Minus size={14} className="text-slate-400" />,
+  stable: <Minus size={14} className="text-[#666]" />,
   deteriorating: <TrendingDown size={14} className="text-red-400" />,
 }
 const TREND_COLOR = {
   improving: 'text-emerald-400',
-  stable: 'text-slate-400',
+  stable: 'text-[#666]',
   deteriorating: 'text-red-400',
 }
 
@@ -30,9 +30,9 @@ function RegionSelect({
   accentClass: string
 }) {
   return (
-    <div className={`relative bg-slate-900 border rounded-xl overflow-hidden ${accentClass}`}>
+    <div className={`relative bg-white border rounded-xl overflow-hidden ${accentClass}`}>
       <select
-        className="w-full bg-transparent text-slate-200 text-sm font-semibold px-4 py-3 pr-10 appearance-none cursor-pointer focus:outline-none"
+        className="w-full bg-transparent text-[#1a1a1a] text-sm font-semibold px-4 py-3 pr-10 appearance-none cursor-pointer focus:outline-none"
         value={value?.id ?? ''}
         onChange={(e) => {
           const r = regions.find(r => r.id === Number(e.target.value))
@@ -44,7 +44,7 @@ function RegionSelect({
           <option key={r.id} value={r.id}>{r.name}</option>
         ))}
       </select>
-      <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+      <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#888] pointer-events-none" />
     </div>
   )
 }
@@ -61,16 +61,16 @@ function KPIRow({ label, a, b, format = (v: number) => v.toFixed(1), lowerIsBett
   const tied = Math.abs(a - b) < 0.01
 
   return (
-    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 py-3 border-b border-slate-800/60 last:border-0">
-      <div className={`text-right text-sm font-bold ${!tied && aWins ? 'text-white' : 'text-slate-400'}`}>
-        <span className={`${!tied && aWins ? 'bg-blue-500/10 text-blue-300 px-2 py-0.5 rounded-lg' : ''}`}>
+    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 py-3 border-b border-[#e5e5e5]/60 last:border-0">
+      <div className={`text-right text-sm font-bold ${!tied && aWins ? 'text-white' : 'text-[#666]'}`}>
+        <span className={`${!tied && aWins ? 'bg-emerald-500/10 text-blue-300 px-2 py-0.5 rounded-lg' : ''}`}>
           {format(a)}
         </span>
       </div>
-      <div className="text-center text-[10px] uppercase tracking-widest text-slate-600 font-bold whitespace-nowrap">
+      <div className="text-center text-[10px] uppercase tracking-widest text-[#666] font-bold whitespace-nowrap">
         {label}
       </div>
-      <div className={`text-left text-sm font-bold ${!tied && bWins ? 'text-white' : 'text-slate-400'}`}>
+      <div className={`text-left text-sm font-bold ${!tied && bWins ? 'text-white' : 'text-[#666]'}`}>
         <span className={`${!tied && bWins ? 'bg-violet-500/10 text-violet-300 px-2 py-0.5 rounded-lg' : ''}`}>
           {format(b)}
         </span>
@@ -135,12 +135,12 @@ export default function ComparePage() {
   if (loading) {
     return (
       <div className="animate-pulse space-y-6 max-w-5xl mx-auto">
-        <div className="h-8 w-64 bg-slate-800 rounded" />
+        <div className="h-8 w-64 bg-[#f5f5f5] rounded" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="h-12 bg-slate-800 rounded-xl" />
-          <div className="h-12 bg-slate-800 rounded-xl" />
+          <div className="h-12 bg-[#f5f5f5] rounded-xl" />
+          <div className="h-12 bg-[#f5f5f5] rounded-xl" />
         </div>
-        <div className="h-72 bg-slate-800 rounded-2xl" />
+        <div className="h-72 bg-[#f5f5f5] rounded-2xl" />
       </div>
     )
   }
@@ -148,7 +148,7 @@ export default function ComparePage() {
   if (regions.length === 0) {
     return (
       <div className="max-w-5xl mx-auto py-12 text-center">
-        <p className="text-slate-400">No regional data available. Check the backend is running.</p>
+        <p className="text-[#666]">No regional data available. Check the backend is running.</p>
       </div>
     )
   }
@@ -164,7 +164,7 @@ export default function ComparePage() {
           </div>
           <h1 className="text-2xl font-bold text-white">Region Comparison</h1>
         </div>
-        <p className="text-slate-400 text-sm ml-12">
+        <p className="text-[#666] text-sm ml-12">
           Select any two NHS regions to compare waiting times, inequality scores, and backlog rates side by side.
         </p>
       </motion.div>
@@ -172,8 +172,8 @@ export default function ComparePage() {
       {/* Selectors */}
       <motion.div variants={fade} className="grid grid-cols-2 gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-blue-400 mb-2 ml-1">Region A</p>
-          <RegionSelect regions={regions} value={regionA} onChange={setRegionA} accentClass="border-blue-500/30" />
+          <p className="text-xs font-bold uppercase tracking-widest text-emerald-600 mb-2 ml-1">Region A</p>
+          <RegionSelect regions={regions} value={regionA} onChange={setRegionA} accentClass="border-emerald-500/30" />
         </div>
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-violet-400 mb-2 ml-1">Region B</p>
@@ -184,7 +184,7 @@ export default function ComparePage() {
       {regionA && regionB && (
         <>
           {/* KPI head-to-head */}
-          <motion.div variants={fade} className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <motion.div variants={fade} className="bg-white border border-[#e5e5e5] rounded-2xl p-6">
             <div className="grid grid-cols-[1fr_auto_1fr] mb-4">
               <div className="text-right">
                 <p className="text-sm font-bold text-blue-300">{regionA.name}</p>
@@ -193,7 +193,7 @@ export default function ComparePage() {
                   <span className={`text-xs capitalize ${TREND_COLOR[regionA.trend as keyof typeof TREND_COLOR]}`}>{regionA.trend}</span>
                 </div>
               </div>
-              <div className="text-center px-4 text-xs text-slate-600 font-bold uppercase tracking-widest self-center">vs</div>
+              <div className="text-center px-4 text-xs text-[#666] font-bold uppercase tracking-widest self-center">vs</div>
               <div className="text-left">
                 <p className="text-sm font-bold text-violet-300">{regionB.name}</p>
                 <div className="flex items-center gap-1 mt-0.5">
@@ -238,20 +238,20 @@ export default function ComparePage() {
               format={v => v >= 1_000_000 ? (v / 1_000_000).toFixed(2) + 'M' : Math.round(v / 1000) + 'k'}
               lowerIsBetter
             />
-            <p className="text-[10px] text-slate-600 mt-3">Highlighted value is better. Lower is better for all metrics except where noted.</p>
+            <p className="text-[10px] text-[#666] mt-3">Highlighted value is better. Lower is better for all metrics except where noted.</p>
           </motion.div>
 
           {/* Radar chart */}
           {radarData.length > 0 && (
-            <motion.div variants={fade} className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+            <motion.div variants={fade} className="bg-white border border-[#e5e5e5] rounded-2xl p-6">
               <h2 className="text-sm font-bold text-white mb-1">Performance Profile</h2>
-              <p className="text-xs text-slate-500 mb-5">Higher = better on all axes. Scores normalised relative to each other.</p>
+              <p className="text-xs text-[#888] mb-5">Higher = better on all axes. Scores normalised relative to each other.</p>
               <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
                   <RadarChart data={radarData}>
                     <PolarGrid stroke="#334155" />
                     <PolarAngleAxis dataKey="metric" tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                    <Radar name={regionA.name} dataKey="A" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.15} strokeWidth={2} />
+                    <Radar name={regionA.name} dataKey="A" stroke="#059669" fill="#3b82f6" fillOpacity={0.15} strokeWidth={2} />
                     <Radar name={regionB.name} dataKey="B" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.15} strokeWidth={2} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
                   </RadarChart>
@@ -261,7 +261,7 @@ export default function ComparePage() {
           )}
 
           {/* Bar comparison */}
-          <motion.div variants={fade} className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <motion.div variants={fade} className="bg-white border border-[#e5e5e5] rounded-2xl p-6">
             <h2 className="text-sm font-bold text-white mb-5">Key Metrics Bar Comparison</h2>
             <div className="h-52">
               <ResponsiveContainer width="100%" height="100%">
@@ -270,7 +270,7 @@ export default function ComparePage() {
                   <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 11 }} />
                   <YAxis tick={{ fill: '#475569', fontSize: 10 }} />
                   <Tooltip
-                    contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8, fontSize: 12 }}
+                    contentStyle={{ background: '#1e293b', border: '1px solid #e5e5e5', borderRadius: 8, fontSize: 12 }}
                     labelStyle={{ color: '#94a3b8' }}
                   />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
