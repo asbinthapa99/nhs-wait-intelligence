@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     groq_api_key: str = ""
     openrouter_api_key: str = ""
+    freellm_api_key: str = ""
     openai_api_key: str = ""
     anthropic_api_key: str = ""
     allowed_origins: str = "http://localhost:3000"

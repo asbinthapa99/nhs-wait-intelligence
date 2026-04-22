@@ -70,6 +70,28 @@ def _groq(prompt: str, max_tokens: int) -> str:
     return resp.json()["choices"][0]["message"]["content"]
 
 
+def _freellm(prompt: str, max_tokens: int) -> str:
+    resp = httpx.post(
+        "https://apifreellm.com/api/v1/chat",
+        headers={"Authorization": f"Bearer {settings.freellm_api_key}"},
+        json={
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+            "max_tokens": max_tokens,
+            "temperature": 0.4,
+        },
+        timeout=30,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    # handle both OpenAI-style and direct response formats
+    if "choices" in data:
+        return data["choices"][0]["message"]["content"]
+    return data.get("content") or data.get("text") or data.get("response", "")
+
+
 def _openrouter(prompt: str, max_tokens: int) -> str:
     resp = httpx.post(
         "https://openrouter.ai/api/v1/chat/completions",
@@ -117,6 +139,8 @@ def _generate(prompt: str, max_tokens: int = 600) -> str:
         providers.append(("Groq", _groq))
     if settings.openrouter_api_key:
         providers.append(("OpenRouter", _openrouter))
+    if settings.freellm_api_key:
+        providers.append(("FreeLLM", _freellm))
     if settings.openai_api_key:
         providers.append(("OpenAI", _openai))
 
