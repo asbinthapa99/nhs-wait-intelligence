@@ -16,10 +16,10 @@ My initial research into UK healthcare data revealed a critical systemic failure
 To solve this, I designed and engineered an enterprise-grade, "Zero-Touch" autonomous intelligence platform. This project demonstrates advanced, end-to-end mastery across the modern data and AI stack:
 
 - **Autonomous ETL Data Pipeline:** Engineered a highly robust Python pipeline that autonomously scrapes, cleans, and ingests massive monthly RTT datasets from NHS England, correlating them with ONS region boundaries (GeoJSON) and Care Quality Commission (CQC) ratings. 
-- **Predictive Machine Learning:** Integrated advanced time-series forecasting (Facebook Prophet / Scikit-Learn) to project 6-month backlog trajectories, allowing policymakers to foresee capacity crises before they happen.
+- **Predictive Machine Learning:** Integrated a linear regression forecaster to project 6-month backlog trajectories, allowing policymakers to foresee capacity crises before they happen.
 - **Advanced AI & NLP Infrastructure:** 
-  - Integrated cloud-based Large Language Models (LLMs) via Anthropics for complex semantic reasoning and natural language querying of SQL databases.
-  - **Proprietary Offline Smart Logic Engine:** Engineered a highly advanced, ultra-fast Local AI fallback engine using custom Natural Language Processing (NLP) heuristics. This engine recognizes over 300+ user intents, detects user emotion/frustration, and computes real-time policy recommendations directly from PostgreSQL. It runs completely offline without third-party API dependencies, guaranteeing 100% uptime, immediate latency, and zero patient-data privacy risks.
+  - Integrated cloud-based Large Language Models (LLMs) via Anthropics for complex semantic reasoning and natural language querying of SQL databases (roadmap item, not yet deployed).
+  - **Proprietary Offline Smart Logic Engine:** Engineered a highly advanced, ultra-fast Local AI fallback engine using custom Natural Language Processing (NLP) heuristics. This engine recognizes 25 intent categories covering 300+ keyword patterns, detects user emotion/frustration, and computes real-time policy recommendations directly from PostgreSQL. It runs completely offline without third-party API dependencies, guaranteeing 100% uptime, immediate latency, and zero patient-data privacy risks.
 - **Zero-Touch CI/CD & Observability:** Implemented automated GitHub Actions for scheduled monthly data scraping/refreshes. Built a robust backend architecture using FastAPI and Celery background workers, monitored by automated SMTP failure-alert systems to ensure silent, continuous operation.
 
 ## 3. Measurable Outcomes & Impact
