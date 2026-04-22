@@ -200,6 +200,38 @@ cd pipeline && pytest tests/ -q
 
 ---
 
+## UK Global Talent Evidence
+
+This repository includes technical and product evidence that can support a UK Global Talent portfolio focused on digital health engineering and public impact.
+
+### 1) Product & Public Impact
+- Open-source NHS analytics platform built on public national datasets.
+- Supports backlog visibility, inequality analysis, and elective recovery monitoring.
+- Publicly accessible deployment for transparent review of the work.
+
+### 2) End-to-End Technical Ownership
+- **Data engineering:** ingestion, validation, and forecasting pipeline in `/pipeline`.
+- **Backend platform engineering:** FastAPI services, domain routers, and exports in `/backend/app`.
+- **Frontend product engineering:** interactive dashboards and regional analysis pages in `/frontend/pages`.
+- **Cloud & operations:** deployable infrastructure for Vercel, Railway, Docker, and Kubernetes (`vercel.json`, `railway.json`, `docker-compose.yml`, `/k8s`).
+
+### 3) Governance, Safety, and Responsible Data Use
+- No patient-level data processing; uses public aggregate statistics.
+- Privacy/governance pages in product (`/frontend/pages/privacy.tsx`, `/frontend/pages/governance.tsx`, `/frontend/pages/legal.tsx`).
+- Security and deployment controls documented in `/docs/security-reviews.md` and `/docs/deployment-checklist.md`.
+
+### 4) Evidence of Engineering Standards
+- Architecture and setup documentation: `/docs/architecture.md`, `/docs/setup.md`.
+- Methodology and research documentation: `/docs/research.md`, `/docs/inequality-methodology.md`, `/docs/data-dictionary.md`.
+- Automated CI workflows for tests and data refresh: `/.github/workflows/test.yml`, `/.github/workflows/pipeline.yml`, `/.github/workflows/refresh.yml`.
+
+### 5) Open-Source Leadership Signals
+- Public contribution workflow and collaboration guidance in `CONTRIBUTING.md`.
+- MIT-licensed repository with transparent issue reporting (`bug_report.md`).
+- Cross-functional documentation for engineering, deployment, and operations in `/docs`.
+
+---
+
 ## Contributing
 
 Built on public NHS data, published under MIT. No advertising, no data selling, no patient data.
