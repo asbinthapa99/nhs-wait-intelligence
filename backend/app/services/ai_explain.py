@@ -1,14 +1,20 @@
+"""
+AI explain service — cascade: Gemini Flash → Groq (llama3) → OpenAI GPT-4o-mini → local fallback.
+Each provider is tried in order; on rate-limit / error the next is used.
+"""
 import hashlib
 import json
+import logging
 from datetime import datetime, timedelta
 from typing import Generator
+
+import httpx
 from sqlalchemy.orm import Session
-from anthropic import Anthropic
+
 from ..models.ai_cache import AICache
 from ..config import settings
 
-
-client = Anthropic(api_key=settings.anthropic_api_key)
+log = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """You are an expert NHS waiting list analyst for a public-interest data platform used by journalists, policy analysts, and NHS commissioners.
 
@@ -29,40 +35,123 @@ Style rules:
 - When relevant, mention policy implications."""
 
 
+# ── Provider implementations ──────────────────────────────────────────────────
+
+def _gemini(prompt: str, max_tokens: int) -> str:
+    resp = httpx.post(
+        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={settings.gemini_api_key}",
+        json={
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+            "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
+            "generationConfig": {"maxOutputTokens": max_tokens, "temperature": 0.4},
+        },
+        timeout=30,
+    )
+    resp.raise_for_status()
+    return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+
+
+def _groq(prompt: str, max_tokens: int) -> str:
+    resp = httpx.post(
+        "https://api.groq.com/openai/v1/chat/completions",
+        headers={"Authorization": f"Bearer {settings.groq_api_key}"},
+        json={
+            "model": "llama3-8b-8192",
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+            "max_tokens": max_tokens,
+            "temperature": 0.4,
+        },
+        timeout=30,
+    )
+    resp.raise_for_status()
+    return resp.json()["choices"][0]["message"]["content"]
+
+
+def _openrouter(prompt: str, max_tokens: int) -> str:
+    resp = httpx.post(
+        "https://openrouter.ai/api/v1/chat/completions",
+        headers={"Authorization": f"Bearer {settings.openrouter_api_key}"},
+        json={
+            "model": "mistralai/mistral-7b-instruct:free",
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+            "max_tokens": max_tokens,
+            "temperature": 0.4,
+        },
+        timeout=30,
+    )
+    resp.raise_for_status()
+    return resp.json()["choices"][0]["message"]["content"]
+
+
+def _openai(prompt: str, max_tokens: int) -> str:
+    resp = httpx.post(
+        "https://api.openai.com/v1/chat/completions",
+        headers={"Authorization": f"Bearer {settings.openai_api_key}"},
+        json={
+            "model": "gpt-4o-mini",
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+            "max_tokens": max_tokens,
+            "temperature": 0.4,
+        },
+        timeout=30,
+    )
+    resp.raise_for_status()
+    return resp.json()["choices"][0]["message"]["content"]
+
+
+def _generate(prompt: str, max_tokens: int = 600) -> str:
+    """Try each provider in order — Gemini → Groq → OpenRouter → OpenAI → raise."""
+    providers = []
+    if settings.gemini_api_key:
+        providers.append(("Gemini", _gemini))
+    if settings.groq_api_key:
+        providers.append(("Groq", _groq))
+    if settings.openrouter_api_key:
+        providers.append(("OpenRouter", _openrouter))
+    if settings.openai_api_key:
+        providers.append(("OpenAI", _openai))
+
+    last_err: Exception = RuntimeError("No AI provider configured")
+    for name, fn in providers:
+        try:
+            result = fn(prompt, max_tokens)
+            if name != "Gemini":
+                log.info("AI fallback used: %s", name)
+            return result
+        except Exception as e:
+            log.warning("AI provider %s failed: %s", name, e)
+            last_err = e
+
+    raise last_err
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
 def _cache_key(question: str, region: str | None) -> str:
     raw = f"{question.lower().strip()}|{(region or '').lower().strip()}"
     return hashlib.sha256(raw.encode()).hexdigest()[:64]
 
 
-def _build_context_message(question: str, region: str | None, context: dict) -> str:
+def _build_prompt(question: str, region: str | None, context: dict, history: list[dict]) -> str:
     region_clause = f" Focus specifically on: {region}." if region else ""
     context_block = "\n".join(f"- {k}: {v}" for k, v in context.items())
-    return f"""Current NHS data context:{region_clause}
-{context_block}
-
-User question: {question}"""
-
-
-def _build_messages(
-    question: str,
-    region: str | None,
-    context: dict,
-    history: list[dict],
-) -> list[dict]:
-    """Build Anthropic messages list with optional prior conversation turns."""
-    messages: list[dict] = []
-
-    # Inject data context only into the first user message
+    header = f"Current NHS data context:{region_clause}\n{context_block}\n\n"
     if history:
-        # Prior turns: alternate user/assistant without re-injecting context
-        for turn in history:
-            messages.append({"role": turn["role"], "content": turn["content"]})
-        messages.append({"role": "user", "content": question})
-    else:
-        messages.append({"role": "user", "content": _build_context_message(question, region, context)})
+        turns = "\n".join(f"{t['role'].upper()}: {t['content']}" for t in history)
+        return f"{header}Conversation so far:\n{turns}\n\nUSER: {question}"
+    return f"{header}User question: {question}"
 
-    return messages
 
+# ── Public API ────────────────────────────────────────────────────────────────
 
 def get_ai_response(
     db: Session,
@@ -71,7 +160,6 @@ def get_ai_response(
     data_context: dict,
     history: list[dict] | None = None,
 ) -> tuple[str, bool]:
-    # Only cache single-turn (no history) queries for correctness
     history = history or []
     use_cache = len(history) == 0
     key = _cache_key(question, region)
@@ -79,38 +167,18 @@ def get_ai_response(
 
     if use_cache:
         cached = db.query(AICache).filter(
-            AICache.cache_key == key,
-            AICache.created_at >= ttl_cutoff,
+            AICache.cache_key == key, AICache.created_at >= ttl_cutoff,
         ).first()
         if cached:
             cached.hit_count += 1
             db.commit()
             return cached.response, True
 
-    messages = _build_messages(question, region, data_context, history)
-    message = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=600,
-        system=[
-            {
-                "type": "text",
-                "text": SYSTEM_PROMPT,
-                "cache_control": {"type": "ephemeral"},
-            }
-        ],
-        messages=messages,
-    )
-    response_text = message.content[0].text
+    prompt = _build_prompt(question, region, data_context, history)
+    response_text = _generate(prompt, max_tokens=600)
 
     if use_cache:
-        entry = AICache(
-            cache_key=key,
-            question=question,
-            region=region,
-            response=response_text,
-            hit_count=0,
-        )
-        db.add(entry)
+        db.add(AICache(cache_key=key, question=question, region=region, response=response_text, hit_count=0))
         db.commit()
 
     return response_text, False
@@ -122,31 +190,84 @@ def stream_ai_response(
     data_context: dict,
     history: list[dict] | None = None,
 ) -> Generator[str, None, None]:
-    """Yields text chunks as SSE data lines for streaming responses."""
+    """Stream via Groq (fastest) → fallback to non-streaming Gemini/OpenAI."""
     history = history or []
-    messages = _build_messages(question, region, data_context, history)
+    prompt = _build_prompt(question, region, data_context, history)
 
-    with client.messages.stream(
-        model="claude-sonnet-4-6",
-        max_tokens=600,
-        system=[
-            {
-                "type": "text",
-                "text": SYSTEM_PROMPT,
-                "cache_control": {"type": "ephemeral"},
-            }
-        ],
-        messages=messages,
-    ) as stream:
-        for text in stream.text_stream:
-            yield text
+    # Try Groq streaming first (lowest latency)
+    if settings.groq_api_key:
+        try:
+            with httpx.stream(
+                "POST",
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {settings.groq_api_key}"},
+                json={
+                    "model": "llama3-8b-8192",
+                    "messages": [
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": prompt},
+                    ],
+                    "max_tokens": 600,
+                    "temperature": 0.4,
+                    "stream": True,
+                },
+                timeout=60,
+            ) as resp:
+                for line in resp.iter_lines():
+                    if not line.startswith("data: ") or line == "data: [DONE]":
+                        continue
+                    try:
+                        chunk = json.loads(line[6:])
+                        text = chunk["choices"][0]["delta"].get("content", "")
+                        if text:
+                            yield text
+                    except (KeyError, json.JSONDecodeError):
+                        continue
+            return
+        except Exception as e:
+            log.warning("Groq stream failed, falling back: %s", e)
 
+    # Gemini streaming fallback
+    if settings.gemini_api_key:
+        try:
+            with httpx.stream(
+                "POST",
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?key={settings.gemini_api_key}&alt=sse",
+                json={
+                    "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+                    "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
+                    "generationConfig": {"maxOutputTokens": 600, "temperature": 0.4},
+                },
+                timeout=60,
+            ) as resp:
+                for line in resp.iter_lines():
+                    if not line.startswith("data: "):
+                        continue
+                    try:
+                        chunk = json.loads(line[6:])
+                        text = chunk["candidates"][0]["content"]["parts"][0]["text"]
+                        if text:
+                            yield text
+                    except (KeyError, json.JSONDecodeError):
+                        continue
+            return
+        except Exception as e:
+            log.warning("Gemini stream failed, falling back: %s", e)
+
+    # Last resort: non-streaming OpenAI
+    try:
+        yield _generate(prompt, max_tokens=600)
+    except Exception:
+        yield "AI service is temporarily unavailable. Please try again in a moment."
+
+
+# ── Insights & briefing (same cascade, identical structure) ───────────────────
 
 _INSIGHTS_PROMPTS: dict[str, str] = {
     "overview": (
         "Based on the latest NHS waiting list data, generate exactly 3 key insights a policy analyst "
         "should know right now. Focus on national trends, regional inequality, and the worst-performing areas. "
-        "Return ONLY valid JSON in this exact shape — no markdown, no preamble:\n"
+        "Return ONLY valid JSON — no markdown, no preamble:\n"
         '[{"heading": "...", "detail": "..."}, {"heading": "...", "detail": "..."}, {"heading": "...", "detail": "..."}]'
     ),
     "specialties": (
@@ -157,13 +278,11 @@ _INSIGHTS_PROMPTS: dict[str, str] = {
     ),
     "trends": (
         "Based on NHS waiting list trend data and 6-month forecasts, generate exactly 3 key insights. "
-        "Focus on trajectory, the widening regional gap, and what happens if current trends continue. "
         "Return ONLY valid JSON — no markdown, no preamble:\n"
         '[{"heading": "...", "detail": "..."}, {"heading": "...", "detail": "..."}, {"heading": "...", "detail": "..."}]'
     ),
     "inequality": (
-        "Based on NHS regional inequality data (deprivation index vs inequality score), generate exactly 3 key insights. "
-        "Focus on what drives the inequality gap, which regions are outliers, and what the deprivation correlation means for policy. "
+        "Based on NHS regional inequality data, generate exactly 3 key insights. "
         "Return ONLY valid JSON — no markdown, no preamble:\n"
         '[{"heading": "...", "detail": "..."}, {"heading": "...", "detail": "..."}, {"heading": "...", "detail": "..."}]'
     ),
@@ -187,185 +306,74 @@ _FALLBACK_INSIGHTS: dict[str, list[dict]] = {
     ],
     "inequality": [
         {"heading": "Deprivation explains 91% of variance", "detail": "The correlation between deprivation index and inequality score is r ≈ 0.91 — deprivation is the strongest predictor of waiting time inequality."},
-        {"heading": "North East is a clear outlier", "detail": "With a deprivation score of 78/100 and an inequality score of 87/100, the North East sits far above the regression line, suggesting structural underfunding beyond deprivation alone."},
-        {"heading": "South West bucking the trend", "detail": "The South West has moderate deprivation (31/100) and the lowest inequality score (31/100), suggesting effective local commissioning can offset deprivation effects."},
+        {"heading": "North East is a clear outlier", "detail": "With a deprivation score of 78/100 and an inequality score of 87/100, the North East sits far above the regression line."},
+        {"heading": "South West bucking the trend", "detail": "The South West has moderate deprivation (31/100) and the lowest inequality score (31/100), suggesting effective local commissioning."},
     ],
 }
 
+_BRIEFING_PROMPT = """Based on the NHS waiting list data provided, write an executive briefing for NHS commissioners.
+Return ONLY valid JSON — no markdown fences, no preamble:
+{"sections":[{"heading":"Situation Overview","body":"..."},{"heading":"Regional Analysis","body":"..."},{"heading":"Specialty Pressures","body":"..."},{"heading":"Red Flags","body":"..."},{"heading":"Policy Recommendations","body":"..."}]}
+Each body 3-5 sentences. Use specific numbers. Be direct."""
 
-def get_proactive_insights(
-    db: Session,
-    topic: str,
-    data_context: dict,
-) -> tuple[list[dict], bool]:
-    """Returns 3 structured insight bullets for a given topic, with caching."""
-    cache_raw = f"insights|{topic}"
-    key = hashlib.sha256(cache_raw.encode()).hexdigest()[:64]
+_BRIEFING_FALLBACK = {"sections": [
+    {"heading": "Situation Overview", "body": "The NHS waiting list stands at **7.62 million** patients nationally, growing 2.3% this month. **38.4%** of patients are waiting over the 18-week RTT standard."},
+    {"heading": "Regional Analysis", "body": "The **North East & Yorkshire** has an inequality score of **87/100** — a **2.4x gap** vs the South West, the widest on record."},
+    {"heading": "Specialty Pressures", "body": "**Orthopaedics**: 680,000 patients, 52% over 18 weeks, +18.4% YoY. **Mental health**: +22.1% YoY — the steepest growth."},
+    {"heading": "Red Flags", "body": "Mental health growth (22.1%) is double the next specialty. North East has no month of improvement in the tracked period."},
+    {"heading": "Policy Recommendations", "body": "1. Targeted North East orthopaedic and mental health investment. 2. Urgent mental health pathway review. 3. Deprivation-weighted funding formula."},
+]}
+
+
+def get_proactive_insights(db: Session, topic: str, data_context: dict) -> tuple[list[dict], bool]:
+    key = hashlib.sha256(f"insights|{topic}".encode()).hexdigest()[:64]
     ttl_cutoff = datetime.utcnow() - timedelta(hours=settings.cache_ttl_hours)
 
-    cached = db.query(AICache).filter(
-        AICache.cache_key == key,
-        AICache.created_at >= ttl_cutoff,
-    ).first()
-
+    cached = db.query(AICache).filter(AICache.cache_key == key, AICache.created_at >= ttl_cutoff).first()
     if cached:
         cached.hit_count += 1
         db.commit()
         return json.loads(cached.response), True
 
-    if not settings.anthropic_api_key:
+    if not any([settings.gemini_api_key, settings.groq_api_key, settings.openai_api_key]):
         return _FALLBACK_INSIGHTS.get(topic, _FALLBACK_INSIGHTS["overview"]), False
 
     context_block = "\n".join(f"- {k}: {v}" for k, v in data_context.items())
-    prompt = _INSIGHTS_PROMPTS.get(topic, _INSIGHTS_PROMPTS["overview"])
-    full_prompt = f"Current NHS data:\n{context_block}\n\n{prompt}"
-
-    message = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=500,
-        system=[
-            {
-                "type": "text",
-                "text": SYSTEM_PROMPT,
-                "cache_control": {"type": "ephemeral"},
-            }
-        ],
-        messages=[{"role": "user", "content": full_prompt}],
-    )
-    raw = message.content[0].text.strip()
+    prompt = f"Current NHS data:\n{context_block}\n\n{_INSIGHTS_PROMPTS.get(topic, _INSIGHTS_PROMPTS['overview'])}"
 
     try:
-        bullets = json.loads(raw)
-    except json.JSONDecodeError:
+        raw = _generate(prompt, max_tokens=500)
+        bullets = json.loads(raw.strip())
+    except Exception:
         bullets = _FALLBACK_INSIGHTS.get(topic, _FALLBACK_INSIGHTS["overview"])
 
-    entry = AICache(
-        cache_key=key,
-        question=f"insights:{topic}",
-        region=None,
-        response=json.dumps(bullets),
-        hit_count=0,
-    )
-    db.add(entry)
+    db.add(AICache(cache_key=key, question=f"insights:{topic}", region=None, response=json.dumps(bullets), hit_count=0))
     db.commit()
     return bullets, False
 
 
-_BRIEFING_PROMPT = """Based on the NHS waiting list data provided, write an executive briefing for NHS commissioners and policy makers.
-
-Return ONLY valid JSON with this exact structure — no markdown fences, no preamble:
-{
-  "sections": [
-    {"heading": "Situation Overview", "body": "2-3 sentences on the national picture with key numbers."},
-    {"heading": "Regional Analysis", "body": "Which regions are performing worst and why, with specific figures."},
-    {"heading": "Specialty Pressures", "body": "Which specialties are under most pressure and growth rates."},
-    {"heading": "Red Flags", "body": "2-3 specific anomalies or deteriorating signals that require immediate attention."},
-    {"heading": "Policy Recommendations", "body": "3 concrete, evidence-based actions commissioners should take."}
-  ]
-}
-
-Each body should be 3-5 sentences. Use specific numbers. Be direct and actionable."""
-
-_BRIEFING_FALLBACK = {
-    "sections": [
-        {
-            "heading": "Situation Overview",
-            "body": (
-                "The NHS waiting list stands at **7.62 million** patients nationally, growing 2.3% this month. "
-                "**38.4%** of patients are waiting over the 18-week RTT standard. "
-                "The national picture is one of sustained deterioration with no sign of stabilisation."
-            ),
-        },
-        {
-            "heading": "Regional Analysis",
-            "body": (
-                "The **North East & Yorkshire** remains the worst-performing region with an inequality score of **87/100** — "
-                "87% of patients waiting over 18 weeks, compared to **31%** in the South West. "
-                "This **2.4x gap** is the widest on record. "
-                "The Midlands (score 74) and North West (68) are also significantly above the national average. "
-                "Only the South West, South East, and London show improving trends."
-            ),
-        },
-        {
-            "heading": "Specialty Pressures",
-            "body": (
-                "**Orthopaedics** is the highest-pressure specialty: 680,000 patients waiting with **52%** over 18 weeks, up 18.4% year-on-year. "
-                "**Mental health** has seen the steepest growth at **+22.1% YoY**, signalling an emerging crisis in community provision. "
-                "Ophthalmology (48% over 18 weeks, 520k patients) and Neurology (44%) are also critical. "
-                "The common thread is elective care capacity being crowded out by emergency demand in deprived areas."
-            ),
-        },
-        {
-            "heading": "Red Flags",
-            "body": (
-                "1. **Mental health YoY growth (22.1%)** is nearly double the next-highest specialty — this trend, if unchecked, "
-                "will produce a structural crisis within 18 months. "
-                "2. **North East deterioration continues**: the region has not shown a single month of improvement in the tracked period. "
-                "3. **National backlog trajectory** projects 9M+ patients by mid-2025 at current growth rates — a threshold that has historically triggered emergency funding reviews."
-            ),
-        },
-        {
-            "heading": "Policy Recommendations",
-            "body": (
-                "1. **Targeted North East investment**: allocate additional orthopaedic and mental health capacity specifically to North East & Yorkshire trusts — "
-                "modelling suggests this would have the highest marginal impact on national inequality figures. "
-                "2. **Mental health rapid review**: commission an urgent review of mental health referral-to-treatment pathways; "
-                "22% YoY growth requires structural intervention, not capacity management alone. "
-                "3. **Deprivation-weighted funding formula**: the 0.91 correlation between deprivation and inequality score justifies "
-                "revising the funding allocation formula to weight deprived areas more heavily in elective care budgets."
-            ),
-        },
-    ]
-}
-
-
 def get_executive_briefing(db: Session, data_context: dict) -> tuple[dict, bool]:
-    """Returns a full structured executive briefing, cached for 24 hours."""
     key = hashlib.sha256(b"executive_briefing_v1").hexdigest()[:64]
     ttl_cutoff = datetime.utcnow() - timedelta(hours=settings.cache_ttl_hours)
 
-    cached = db.query(AICache).filter(
-        AICache.cache_key == key,
-        AICache.created_at >= ttl_cutoff,
-    ).first()
-
+    cached = db.query(AICache).filter(AICache.cache_key == key, AICache.created_at >= ttl_cutoff).first()
     if cached:
         cached.hit_count += 1
         db.commit()
         return json.loads(cached.response), True
 
-    if not settings.anthropic_api_key:
+    if not any([settings.gemini_api_key, settings.groq_api_key, settings.openai_api_key]):
         return _BRIEFING_FALLBACK, False
 
     context_block = "\n".join(f"- {k}: {v}" for k, v in data_context.items())
-    full_prompt = f"Current NHS data:\n{context_block}\n\n{_BRIEFING_PROMPT}"
-
-    message = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=1200,
-        system=[
-            {
-                "type": "text",
-                "text": SYSTEM_PROMPT,
-                "cache_control": {"type": "ephemeral"},
-            }
-        ],
-        messages=[{"role": "user", "content": full_prompt}],
-    )
-    raw = message.content[0].text.strip()
+    prompt = f"Current NHS data:\n{context_block}\n\n{_BRIEFING_PROMPT}"
 
     try:
-        briefing = json.loads(raw)
-    except json.JSONDecodeError:
+        raw = _generate(prompt, max_tokens=1200)
+        briefing = json.loads(raw.strip())
+    except Exception:
         briefing = _BRIEFING_FALLBACK
 
-    entry = AICache(
-        cache_key=key,
-        question="executive_briefing",
-        region=None,
-        response=json.dumps(briefing),
-        hit_count=0,
-    )
-    db.add(entry)
+    db.add(AICache(cache_key=key, question="executive_briefing", region=None, response=json.dumps(briefing), hit_count=0))
     db.commit()
     return briefing, False

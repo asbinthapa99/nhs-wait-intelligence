@@ -9,12 +9,9 @@ from xml.etree import ElementTree as ET
 
 import httpx
 from sqlalchemy.orm import Session
-from anthropic import Anthropic
 
 from ..models.ai_cache import AICache
-from ..config import settings
-
-client = Anthropic(api_key=settings.anthropic_api_key)
+from .ai_explain import _generate
 
 RSS_FEEDS = [
     ("NHS England", "https://www.england.nhs.uk/feed/"),
@@ -77,9 +74,7 @@ async def _fetch_feeds() -> list[dict]:
 
 
 def _ai_triage(articles: list[dict]) -> list[dict]:
-    if not articles or not settings.anthropic_api_key:
-        for a in articles:
-            a.update({"tag": "general", "relevance": 5, "comment": "No AI triage available — set ANTHROPIC_API_KEY."})
+    if not articles:
         return articles
 
     headline_lines = "\n".join(
@@ -89,12 +84,7 @@ def _ai_triage(articles: list[dict]) -> list[dict]:
     prompt = _TRIAGE_PROMPT.format(headlines=headline_lines)
 
     try:
-        message = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=1500,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        raw = message.content[0].text.strip()
+        raw = _generate(prompt, max_tokens=1500).strip()
         tags = json.loads(raw)
         for i, a in enumerate(articles):
             t = tags[i] if i < len(tags) else {}

@@ -3,6 +3,10 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     database_url: str = "postgresql://postgres:postgres@localhost:5432/nhs_intelligence"
+    gemini_api_key: str = ""
+    groq_api_key: str = ""
+    openrouter_api_key: str = ""
+    openai_api_key: str = ""
     anthropic_api_key: str = ""
     allowed_origins: str = "http://localhost:3000"
     ai_rate_limit: str = "10/minute"
