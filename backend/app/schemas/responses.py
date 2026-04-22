@@ -130,6 +130,7 @@ class AIResponse(BaseModel):
     response: str
     data_context: AIDataContext | None
     cached: bool
+    provider: str | None = None
 
 
 class AIInsightBullet(BaseModel):

@@ -16,23 +16,34 @@ from ..config import settings
 
 log = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """You are an expert NHS waiting list analyst for a public-interest data platform used by journalists, policy analysts, and NHS commissioners.
+SYSTEM_PROMPT = """You are an intelligent assistant built into NHS Wait Intelligence, a public data platform for journalists, policymakers, NHS commissioners, and patients.
 
-Your role: surface inequality, explain root causes, and highlight policy-relevant findings from NHS referral-to-treatment (RTT) data, ONS deprivation indices, and CQC quality scores.
+You combine the knowledge of a senior NHS analyst with the warmth and clarity of a world-class AI assistant.
 
-Key facts you know:
-- The NHS 18-week RTT standard requires 92% of patients to start treatment within 18 weeks of referral.
-- England has 7 NHS commissioning regions: North East & Yorkshire, North West, Midlands, East of England, London, South East, South West.
-- Deprivation is measured on the Index of Multiple Deprivation (IMD); higher score = more deprived.
-- Orthopaedics, Ophthalmology, and Mental Health are the highest-pressure specialties.
-- The North East & Yorkshire has the highest inequality score (87/100) and the South West the lowest (31/100) — a 2.4x gap.
+## Personality
+- Warm, direct, and clear — never robotic or stiff
+- Concise by default; expand only when the question demands it
+- Honest about uncertainty: say "I don't have data on that" rather than guess
 
-Style rules:
-- Be concise, factual, and cite specific numbers.
-- Use plain English suitable for non-technical readers.
-- Format key numbers and findings in **bold**.
-- Do not speculate beyond what the data shows.
-- When relevant, mention policy implications."""
+## How to respond
+- **Greetings / casual messages** (hi, hello, how are you, etc.): Reply naturally and briefly. Introduce yourself in 1 sentence. Ask what they'd like to explore. Never dump statistics unprompted.
+- **NHS data questions**: Be precise, cite specific numbers, use **bold** for key figures. Keep answers under 200 words unless depth is needed.
+- **General questions** unrelated to NHS: Answer helpfully and naturally — you're a general assistant too.
+- **Ambiguous questions**: Ask one short clarifying question rather than guessing.
+- **Follow-up questions**: Use the conversation history to give connected, coherent answers.
+
+## NHS knowledge
+- 18-week RTT standard: 92% of patients must start treatment within 18 weeks of referral
+- 7 regions: North East & Yorkshire, North West, Midlands, East of England, London, South East, South West
+- IMD (Index of Multiple Deprivation): higher score = more deprived
+- Highest pressure specialties: Orthopaedics, Ophthalmology, Mental Health
+- Worst inequality: North East & Yorkshire (87/100) · Best: South West (31/100) — 2.4× gap
+
+## Format rules
+- **Bold** key numbers and findings
+- Use bullet points for 3+ items
+- Use headings only for long multi-section responses
+- Never start responses with "Certainly!", "Great question!", or similar filler"""
 
 
 # ── Provider implementations ──────────────────────────────────────────────────
@@ -155,8 +166,11 @@ def _openai(prompt: str, max_tokens: int) -> str:
     return resp.json()["choices"][0]["message"]["content"]
 
 
-def _generate(prompt: str, max_tokens: int = 600) -> str:
-    """Try each provider in order — Gemini → Groq → OpenRouter → OpenAI → raise."""
+def _generate(prompt: str, max_tokens: int = 600, _context: dict | None = None, _question: str | None = None, _region: str | None = None) -> tuple[str, str]:
+    """Try each provider in order — Gemini → Cerebras → Groq → OpenRouter → FreeLLM → OpenAI → local.
+    Returns (text, provider_name). Never raises — always returns something."""
+    from .local_ai import generate_advanced_fallback_response
+
     providers = []
     if settings.gemini_api_key:
         providers.append(("Gemini", _gemini))
@@ -171,18 +185,23 @@ def _generate(prompt: str, max_tokens: int = 600) -> str:
     if settings.openai_api_key:
         providers.append(("OpenAI", _openai))
 
-    last_err: Exception = RuntimeError("No AI provider configured")
     for name, fn in providers:
         try:
             result = fn(prompt, max_tokens)
             if name != "Gemini":
                 log.info("AI fallback used: %s", name)
-            return result
+            return result, name
         except Exception as e:
             log.warning("AI provider %s failed: %s", name, e)
-            last_err = e
 
-    raise last_err
+    # All online providers failed — use local AI
+    log.warning("All online AI providers failed, using local AI")
+    local_result = generate_advanced_fallback_response(
+        _question or prompt[:200],
+        _region,
+        _context or {},
+    )
+    return local_result, "local"
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -210,7 +229,8 @@ def get_ai_response(
     region: str | None,
     data_context: dict,
     history: list[dict] | None = None,
-) -> tuple[str, bool]:
+) -> tuple[str, bool, str]:
+    """Returns (response_text, cached, provider_name)."""
     history = history or []
     use_cache = len(history) == 0
     key = _cache_key(question, region)
@@ -223,16 +243,16 @@ def get_ai_response(
         if cached:
             cached.hit_count += 1
             db.commit()
-            return cached.response, True
+            return cached.response, True, "cached"
 
     prompt = _build_prompt(question, region, data_context, history)
-    response_text = _generate(prompt, max_tokens=600)
+    response_text, provider = _generate(prompt, max_tokens=600, _context=data_context, _question=question, _region=region)
 
     if use_cache:
         db.add(AICache(cache_key=key, question=question, region=region, response=response_text, hit_count=0))
         db.commit()
 
-    return response_text, False
+    return response_text, False, provider
 
 
 def stream_ai_response(
@@ -240,10 +260,14 @@ def stream_ai_response(
     region: str | None,
     data_context: dict,
     history: list[dict] | None = None,
-) -> Generator[str, None, None]:
-    """Stream via Groq (fastest) → fallback to non-streaming Gemini/OpenAI."""
+) -> Generator[str | dict, None, None]:
+    """Stream via Groq (fastest) → Gemini → local AI. Never fails.
+    Yields str chunks, then a final dict {"provider": name}."""
     history = history or []
     prompt = _build_prompt(question, region, data_context, history)
+    _ctx = data_context
+    _q = question
+    _r = region
 
     # Try Groq streaming first (lowest latency)
     if settings.groq_api_key:
@@ -274,6 +298,7 @@ def stream_ai_response(
                             yield text
                     except (KeyError, json.JSONDecodeError):
                         continue
+            yield {"provider": "Groq"}
             return
         except Exception as e:
             log.warning("Groq stream failed, falling back: %s", e)
@@ -301,15 +326,15 @@ def stream_ai_response(
                             yield text
                     except (KeyError, json.JSONDecodeError):
                         continue
+            yield {"provider": "Gemini"}
             return
         except Exception as e:
             log.warning("Gemini stream failed, falling back: %s", e)
 
-    # Last resort: non-streaming OpenAI
-    try:
-        yield _generate(prompt, max_tokens=600)
-    except Exception:
-        yield "AI service is temporarily unavailable. Please try again in a moment."
+    # Last resort: non-streaming cascade (always returns something via local AI)
+    text, provider = _generate(prompt, max_tokens=600, _context=_ctx, _question=_q, _region=_r)
+    yield text
+    yield {"provider": provider}
 
 
 # ── Insights & briefing (same cascade, identical structure) ───────────────────
@@ -393,7 +418,7 @@ def get_proactive_insights(db: Session, topic: str, data_context: dict) -> tuple
     prompt = f"Current NHS data:\n{context_block}\n\n{_INSIGHTS_PROMPTS.get(topic, _INSIGHTS_PROMPTS['overview'])}"
 
     try:
-        raw = _generate(prompt, max_tokens=500)
+        raw, _ = _generate(prompt, max_tokens=500)
         bullets = json.loads(raw.strip())
     except Exception:
         bullets = _FALLBACK_INSIGHTS.get(topic, _FALLBACK_INSIGHTS["overview"])
@@ -420,7 +445,7 @@ def get_executive_briefing(db: Session, data_context: dict) -> tuple[dict, bool]
     prompt = f"Current NHS data:\n{context_block}\n\n{_BRIEFING_PROMPT}"
 
     try:
-        raw = _generate(prompt, max_tokens=1200)
+        raw, _ = _generate(prompt, max_tokens=1200)
         briefing = json.loads(raw.strip())
     except Exception:
         briefing = _BRIEFING_FALLBACK

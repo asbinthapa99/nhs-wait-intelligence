@@ -84,7 +84,8 @@ def _ai_triage(articles: list[dict]) -> list[dict]:
     prompt = _TRIAGE_PROMPT.format(headlines=headline_lines)
 
     try:
-        raw = _generate(prompt, max_tokens=1500).strip()
+        raw, _ = _generate(prompt, max_tokens=1500)
+        raw = raw.strip()
         tags = json.loads(raw)
         for i, a in enumerate(articles):
             t = tags[i] if i < len(tags) else {}

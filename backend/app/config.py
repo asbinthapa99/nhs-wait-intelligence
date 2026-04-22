@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     anthropic_api_key: str = ""
     allowed_origins: str = "http://localhost:3000"
-    ai_rate_limit: str = "10/minute"
+    ai_rate_limit: str = "60/minute"
     cache_ttl_hours: int = 24
     log_level: str = "INFO"
     

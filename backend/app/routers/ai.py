@@ -98,11 +98,12 @@ async def ai_explain(
 
     history = [{"role": m.role, "content": m.content} for m in payload.history]
     try:
-        response_text, cached = get_ai_response(db, payload.question, payload.region, context, history)
+        response_text, cached, provider = get_ai_response(db, payload.question, payload.region, context, history)
     except Exception as e:
         print(f"AI Explain API Error: {e}")
         response_text = _fallback_ai_response(payload.question, payload.region, context)
         cached = False
+        provider = "local"
 
     return AIResponse(
         region=payload.region,
@@ -110,6 +111,7 @@ async def ai_explain(
         response=response_text,
         data_context=data_ctx,
         cached=cached,
+        provider=provider,
     )
 
 
@@ -132,16 +134,20 @@ async def ai_stream(
 
     def _generate():
         try:
+            provider = None
             for chunk in stream_ai_response(payload.question, payload.region, context, history):
-                yield "data: " + json.dumps({"text": chunk, "done": False}) + "\n\n"
-            yield "data: " + json.dumps({"done": True}) + "\n\n"
+                if isinstance(chunk, dict):
+                    provider = chunk.get("provider")
+                else:
+                    yield "data: " + json.dumps({"text": chunk, "done": False}) + "\n\n"
+            yield "data: " + json.dumps({"done": True, "provider": provider}) + "\n\n"
         except Exception as e:
             print(f"AI Stream API Error: {e}")
             yield "data: " + json.dumps({
                 "text": "\n\n*[API Limit Reached - Switching to Fallback Mode]*\n\n" + _fallback_ai_response(payload.question, payload.region, context),
                 "done": False
             }) + "\n\n"
-            yield "data: " + json.dumps({"done": True}) + "\n\n"
+            yield "data: " + json.dumps({"done": True, "provider": "local"}) + "\n\n"
 
     return StreamingResponse(_generate(), media_type="text/event-stream")
 
