@@ -4,7 +4,7 @@
 
 **Live:** https://nhs-wait-intelligence.vercel.app  
 **Backend:** Railway (FastAPI + PostgreSQL)  
-**Stack:** Next.js 14 · FastAPI · PostgreSQL · Anthropic Claude · Recharts
+**Stack:** Next.js 14 · FastAPI · PostgreSQL  · Recharts
 
 ---
 
