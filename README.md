@@ -200,6 +200,72 @@ cd pipeline && pytest tests/ -q
 
 ---
 
+## Why This Project Matters
+
+NHS Wait Intelligence addresses a high-impact national problem: long elective waiting times and unequal access across regions.  
+The platform turns complex public datasets into practical decision support for service planning, policy analysis, and recovery monitoring.
+
+It is designed to be:
+
+- Public-interest focused: built on official open data, with no patient-level data
+- Operationally useful: dashboards and exports support real planning workflows
+- Transparent: methods and sources are visible, reproducible, and auditable
+- Scalable: cloud deployment allows continuous delivery and iterative improvement
+
+---
+
+## Technical Depth and Innovation
+
+This project demonstrates end-to-end product and engineering capability across:
+
+- Data engineering: ingestion, transformation, and persistence of NHS and ONS datasets
+- Analytical modeling: inequality scoring, trend analysis, anomaly detection, and forecasting
+- Backend systems: FastAPI APIs, caching, export endpoints, and simulation services
+- Frontend engineering: interactive maps, comparative analytics, and decision dashboards
+- AI integration: domain-aware explanatory endpoints with fallback behavior when external AI is unavailable
+- Cloud delivery: production deployment across Vercel, Railway, and Neon with environment-based configuration
+
+---
+
+## Real-World Value for NHS Stakeholders
+
+The platform supports multiple practical use cases:
+
+- Regional leaders can identify underperforming areas and compare against peers
+- Policy teams can track progress toward 18-week and 52-week targets over time
+- Analysts can export clean data for deeper statistical work and reporting
+- Strategy teams can test intervention scenarios before resource commitments
+
+---
+
+## UK Global Talent (Digital Technology) Portfolio Framing
+
+For portfolio use, this repository can be mapped to evidence categories commonly used in UK Global Talent applications.
+
+| Evidence area | What this repository demonstrates | What to add in your portfolio |
+|---|---|---|
+| Product-led innovation | End-to-end digital platform solving a national healthcare operations problem | Short product narrative + screenshots of key dashboards |
+| Technical leadership | Architecture decisions across frontend, backend, data pipeline, and deployment | Architecture note linking design decisions to outcomes |
+| Impact and contribution | Public-interest tooling using official NHS data | Usage evidence (users, demos, partner feedback, references) |
+| Recognition and credibility | Open-source delivery with transparent methods and reproducible data sources | Links to talks, write-ups, endorsements, or external mentions |
+| Ongoing excellence | Clear roadmap and extensible analytics modules | Changelog of improvements and measurable milestones |
+
+Note: visa eligibility decisions are made by official assessors; this section is a technical documentation aid, not legal advice.
+
+---
+
+## Suggested Additions to Strengthen This README Further
+
+To improve evidence quality without removing current content, consider adding:
+
+1. A short "Results" section with verified adoption or engagement metrics
+2. Case examples showing how insights informed a real planning decision
+3. Links to presentations, demos, or public technical write-ups
+4. A timeline of major releases and their measurable improvements
+5. Named contributor roles to highlight leadership and ownership
+
+---
+
 ## Contributing
 
 Built on public NHS data, published under MIT. No advertising, no data selling, no patient data.
