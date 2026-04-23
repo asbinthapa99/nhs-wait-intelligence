@@ -1,9 +1,12 @@
 """
-Privacy vault — stubs out Microsoft Presidio PII scrubbing when the
-presidio_analyzer / presidio_anonymizer packages are not installed.
-The rest of the API remains fully functional; the scrub_text method
-simply returns the input unchanged.
+Privacy vault — Microsoft Presidio PII scrubbing.
+Falls back to a no-op when presidio_analyzer / presidio_anonymizer are not installed,
+logging a warning so operators know PII redaction is inactive.
 """
+import logging
+
+log = logging.getLogger(__name__)
+
 try:
     from presidio_analyzer import AnalyzerEngine
     from presidio_anonymizer import AnonymizerEngine
@@ -27,9 +30,13 @@ try:
             return redacted.text
 
 except ImportError:
+    log.warning(
+        "presidio_analyzer / presidio_anonymizer not installed — PII scrubbing is disabled. "
+        "Install with: pip install presidio-analyzer presidio-anonymizer"
+    )
 
     class PIIProtector:  # type: ignore[no-redef]
-        """No-op stub used when presidio packages are not installed."""
+        """No-op fallback used when presidio packages are not installed."""
 
         def scrub_text(self, text: str) -> str:
             return text

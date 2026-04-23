@@ -16,6 +16,8 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
+    env:
+      HAS_SMTP: ${{ secrets.SMTP_HOST != '' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -85,7 +87,7 @@ jobs:
             }
 
       - name: Send email on failure (optional)
-        if: failure() && secrets.SMTP_HOST != '' && secrets.SMTP_PORT != '' && secrets.SMTP_USERNAME != '' && secrets.SMTP_PASSWORD != '' && secrets.ALERT_EMAIL != ''
+        if: failure() && env.HAS_SMTP == 'true'
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: ${{ secrets.SMTP_HOST }}

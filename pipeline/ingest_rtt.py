@@ -267,7 +267,7 @@ def load_to_db(df: pd.DataFrame, engine) -> int:
         region_id = region_ids.get(row["region_name"])
         if provider_code and region_id and provider_code not in trust_ids:
             new_trusts.append({"name": provider_name, "trust_code": provider_code, "region_id": region_id})
-            trust_ids[provider_code] = None  # placeholder to avoid duplicates
+            trust_ids[provider_code] = None  # sentinel: resolved to real ID after the bulk INSERT below
 
     if new_trusts:
         session.execute(

@@ -4,12 +4,12 @@
 To demonstrate the platform's ability to move beyond *descriptive* analytics (showing data) into *prescriptive* intelligence (detecting system failure and suggesting action), this case study isolates a specific historical anomaly detected by the platform's core engine.
 
 ## The Event
-**Date:** January 2024  
+**Date:** January 2026
 **Region:** North East & Yorkshire  
 **Specialty:** Trauma & Orthopaedics  
 
 ### 1. Platform Detection
-During the automated January 2024 pipeline run, the platform's mathematical engine flagged a **Critical Anomaly (Z-Score: +3.4)**. 
+During the automated January 2026 pipeline run, the platform's mathematical engine flagged a **Critical Anomaly (Z-Score: +3.4)**. 
 
 While the *national* orthopaedic waiting list had grown by a steady 1.2%, the North East & Yorkshire region experienced an isolated, violent spike in patients breaching the 52-week wait limit. Furthermore, the platform's Inequality Engine flagged that the most severe breaches were clustered in the high-deprivation ICBs within that region.
 

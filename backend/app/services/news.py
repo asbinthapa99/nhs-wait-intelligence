@@ -3,12 +3,15 @@ Fetch NHS + health news from public RSS feeds, then AI-triage each headline.
 """
 import hashlib
 import json
+import logging
 import re
 from datetime import datetime, timedelta
 from xml.etree import ElementTree as ET
 
 import httpx
 from sqlalchemy.orm import Session
+
+log = logging.getLogger(__name__)
 
 from ..models.ai_cache import AICache
 from .ai_explain import _generate
@@ -55,8 +58,8 @@ def _parse_rss(xml_text: str, source: str) -> list[dict]:
             pub = (pub_el.text or "").strip() if pub_el is not None else ""
             if title:
                 items.append({"title": title, "url": link, "summary": desc, "published": pub, "source": source})
-    except ET.ParseError:
-        pass
+    except ET.ParseError as exc:
+        log.warning("Failed to parse RSS feed from %r: %s", source, exc)
     return items
 
 
@@ -68,8 +71,8 @@ async def _fetch_feeds() -> list[dict]:
                 r = await http.get(url, headers={"User-Agent": "NHS-Intelligence/1.0"})
                 if r.status_code == 200:
                     articles.extend(_parse_rss(r.text, source))
-            except Exception:
-                pass
+            except Exception as exc:
+                log.warning("Failed to fetch RSS feed %r (%s): %s", url, source, exc)
     return articles[:30]
 
 
@@ -92,7 +95,8 @@ def _ai_triage(articles: list[dict]) -> list[dict]:
             a["tag"] = t.get("tag", "general")
             a["relevance"] = int(t.get("relevance", 5))
             a["comment"] = t.get("comment", "")
-    except Exception:
+    except Exception as exc:
+        log.warning("AI triage failed, applying defaults: %s", exc)
         for a in articles:
             a.update({"tag": "general", "relevance": 5, "comment": ""})
 
