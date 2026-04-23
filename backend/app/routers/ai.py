@@ -1,4 +1,5 @@
 import json
+import logging
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -6,6 +7,8 @@ from sqlalchemy import func
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from starlette.requests import Request
+
+log = logging.getLogger(__name__)
 from ..database import get_db
 from ..models import ProcessedMetric, Region
 from ..schemas.responses import (
@@ -100,7 +103,7 @@ async def ai_explain(
     try:
         response_text, cached, provider = get_ai_response(db, payload.question, payload.region, context, history)
     except Exception as e:
-        print(f"AI Explain API Error: {e}")
+        log.error("AI explain error: %s", e)
         response_text = _fallback_ai_response(payload.question, payload.region, context)
         cached = False
         provider = "local"
@@ -142,7 +145,7 @@ async def ai_stream(
                     yield "data: " + json.dumps({"text": chunk, "done": False}) + "\n\n"
             yield "data: " + json.dumps({"done": True, "provider": provider}) + "\n\n"
         except Exception as e:
-            print(f"AI Stream API Error: {e}")
+            log.error("AI stream error: %s", e)
             yield "data: " + json.dumps({
                 "text": "\n\n*[API Limit Reached - Switching to Fallback Mode]*\n\n" + _fallback_ai_response(payload.question, payload.region, context),
                 "done": False
@@ -163,7 +166,7 @@ async def ai_briefing(
     try:
         briefing_raw, cached = get_executive_briefing(db, context)
     except Exception as e:
-        print(f"AI Briefing API Error: {e}")
+        log.error("AI briefing error: %s", e)
         from ..services.ai_explain import _BRIEFING_FALLBACK
         briefing_raw, cached = _BRIEFING_FALLBACK, False
 
@@ -187,7 +190,7 @@ async def ai_insights(
     try:
         bullets_raw, cached = get_proactive_insights(db, topic, context)
     except Exception as e:
-        print(f"AI Insights API Error: {e}")
+        log.error("AI insights error: %s", e)
         from ..services.ai_explain import _FALLBACK_INSIGHTS
         bullets_raw, cached = _FALLBACK_INSIGHTS.get(topic, _FALLBACK_INSIGHTS["overview"]), False
 
@@ -212,7 +215,7 @@ async def agent_explain(
     try:
         response_text = get_sql_agent_response(safe_question)
     except Exception as e:
-        print(f"Agent Explain API Error: {e}")
+        log.error("Agent explain error: %s", e)
         response_text = "The autonomous SQL agent is currently unavailable or rate limited. Please use the standard AI explain feature for now."
         
     return {

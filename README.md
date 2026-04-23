@@ -268,9 +268,9 @@ cmd = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
 
 ## Roadmap
 
-- [ ] Automated monthly RTT data pipeline (GitHub Actions)
+- [x] Automated monthly RTT data pipeline (GitHub Actions — daily cron in `.github/workflows/refresh.yml`)
 - [ ] Postcode-level wait estimates
-- [ ] Email alerts when your region crosses a threshold
+- [ ] Email alerts when your region crosses a threshold (subscription endpoint live; scheduled job TBD)
 - [ ] Trust-level (not just region-level) breakdown on the map
 - [ ] GP referral pathway guidance with local provider lookup
 

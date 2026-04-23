@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends
+import logging
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 from sqlalchemy import Column, Integer, String, Float, DateTime
@@ -7,6 +8,7 @@ from datetime import datetime, timezone
 from ..database import Base, get_db
 
 router = APIRouter()
+log = logging.getLogger(__name__)
 
 
 class AlertSubscription(Base):
@@ -36,6 +38,8 @@ def subscribe(body: SubscribeRequest, db: Session = Depends(get_db)):
         )
         db.add(sub)
         db.commit()
-    except Exception:
+    except Exception as exc:
         db.rollback()
+        log.error("Failed to save alert subscription for %s: %s", body.email, exc)
+        raise HTTPException(status_code=500, detail="Failed to save subscription. Please try again.")
     return {"ok": True}

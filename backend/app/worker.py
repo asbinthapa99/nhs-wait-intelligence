@@ -1,9 +1,12 @@
+import logging
 import os
 import smtplib
 from email.mime.text import MIMEText
 from celery import Celery
 from celery.signals import task_failure
 from .config import settings
+
+log = logging.getLogger(__name__)
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 
@@ -46,7 +49,7 @@ def handle_task_failure(sender=None, task_id=None, exception=None, args=None, kw
                 server.login(settings.smtp_username, settings.smtp_password)
             server.send_message(msg)
     except Exception as e:
-        print(f"Failed to send alert email: {e}")
+        log.error("Failed to send alert email: %s", e)
 
 @celery_app.task(name="agent_query_task", bind=True)
 def run_agent_query(self, question: str):
