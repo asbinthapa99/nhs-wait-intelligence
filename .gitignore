@@ -17,6 +17,7 @@ node_modules/
 .next/
 .env.local
 npm-debug.log*
+*.tsbuildinfo
 
 # Environment
 .env
@@ -32,3 +33,6 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Claude Code
+.claude/
