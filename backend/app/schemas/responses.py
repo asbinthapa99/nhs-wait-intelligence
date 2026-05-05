@@ -364,3 +364,15 @@ class RttArchiveResponse(BaseModel):
     total_archives: int
     latest_archive: RttArchiveItem | None
     archives: list[RttArchiveItem]
+
+
+class PipelineStatusResponse(BaseModel):
+    healthy: bool
+    latest_snapshot_month: date | None
+    days_since_snapshot: int | None
+    waiting_list_rows: int
+    processed_metric_rows: int
+    forecast_rows: int
+    stale: bool
+    stale_threshold_days: int = 45
+    message: str

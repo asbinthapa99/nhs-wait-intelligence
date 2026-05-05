@@ -9,7 +9,7 @@ from slowapi.errors import RateLimitExceeded
 from .config import settings
 from .database import Base, engine
 from .core.auth import generate_api_key
-from .routers import overview, regions, inequality, specialties, trends, export, status, ai as ai_router, news as news_router, simulator, anomaly, patient, alerts_sub, mutual_aid
+from .routers import overview, regions, inequality, specialties, trends, export, status, ai as ai_router, news as news_router, simulator, anomaly, patient, alerts_sub, mutual_aid, pipeline as pipeline_router
 from .schemas.responses import HealthResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi_cache import FastAPICache
@@ -87,6 +87,7 @@ app.include_router(simulator.router, prefix="/api", tags=["simulator"])
 app.include_router(anomaly.router, prefix="/api", tags=["anomaly"])
 app.include_router(alerts_sub.router, prefix="/api", tags=["alerts"])
 app.include_router(mutual_aid.router, prefix="/api", tags=["mutual_aid"])
+app.include_router(pipeline_router.router, prefix="/api", tags=["pipeline"])
 
 
 @app.post("/api/keys/generate", tags=["auth"])
