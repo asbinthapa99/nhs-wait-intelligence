@@ -14,7 +14,9 @@ Raw data is extracted to: pipeline/data/raw/rtt/
 Source: https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/
 """
 
+import argparse
 import logging
+import os
 import sys
 from sqlalchemy import create_engine
 
@@ -85,7 +87,38 @@ def run_pipeline() -> None:
     log.info("=== Pipeline complete ===")
 
 
+_LOCAL_DEFAULT_URL = "postgresql://postgres:postgres@localhost:5432/nhs_intelligence"
+
+
+def preflight_check(dry_run: bool = False) -> None:
+    """Fail fast if critical configuration is missing or obviously wrong."""
+    in_ci = bool(os.getenv("CI") or os.getenv("GITHUB_ACTIONS"))
+
+    if not DATABASE_URL or DATABASE_URL == _LOCAL_DEFAULT_URL:
+        if in_ci:
+            log.error(
+                "DATABASE_URL is not configured. "
+                "Add the DATABASE_URL secret under repo Settings → Secrets and variables → Actions."
+            )
+            sys.exit(2)
+        log.warning("Using local fallback DATABASE_URL — set DATABASE_URL env var for production.")
+
+    if dry_run:
+        log.info("Dry-run mode — configuration validated OK, exiting without touching the database.")
+        sys.exit(0)
+
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="NHS Intelligence Pipeline")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate config and exit without running the pipeline (useful for CI checks)",
+    )
+    args = parser.parse_args()
+
+    preflight_check(dry_run=args.dry_run)
+
     try:
         run_pipeline()
     except Exception as exc:
