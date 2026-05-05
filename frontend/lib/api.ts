@@ -489,6 +489,27 @@ export function getApiUrl(path: string): string {
   return `${BASE_URL}${path}`
 }
 
+export interface PipelineStatus {
+  healthy: boolean
+  latest_snapshot_month: string | null
+  days_since_snapshot: number | null
+  waiting_list_rows: number
+  processed_metric_rows: number
+  forecast_rows: number
+  stale: boolean
+  stale_threshold_days: number
+  message: string
+}
+
+export async function getPipelineStatus(): Promise<PipelineStatus | null> {
+  try {
+    const { data } = await client.get<PipelineStatus>('/api/pipeline/status')
+    return data
+  } catch {
+    return null
+  }
+}
+
 // ── Empty data states ──────────────────────────────────────────────────────
 
 export const EMPTY_OVERVIEW: OverviewData = {
